@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf8'?>
+<conf>
+   <msgclient>
+      <name>consistency_check</name>
+      <url>218.16.227.183:13320</url>
+      <data>./data/msgclient</data>
+      <default_offset>0</default_offset>
+      <threads>1</threads>
+      <subscribe_table>
+         <tbl>sinfo</tbl>
+      </subscribe_table>
+   </msgclient>
+</conf>
+

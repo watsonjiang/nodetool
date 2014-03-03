@@ -1,0 +1,5 @@
+-I/home/watson/myshard/trunk/hadb_publisher 
+-I/home/watson/nodetool/leveldb/include 
+-I/home/watson/nodetool/sha1 
+-I/home/watson/nodetool/ht
+-I/usr/include
