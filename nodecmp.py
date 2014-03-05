@@ -1,0 +1,112 @@
+#!/usr/bin/python
+import socket;
+
+class NodeClient:
+   _s = None  #the socket
+   def __init__(self, host, port):
+      self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self._s.connect((host, port));
+   
+   def readlines(self):
+      line = ""
+      c = self._s.recv(4096)
+      while True :
+         t = c.split('\n')
+         for i in xrange(0, len(t)-1):
+            yield t[i]
+         if len(c) == 4096 and c[4095] == '\n':
+            yield t[len(t)-1]
+         else:
+            c = "".join((t[len(t)-1], self._s.recv(4096)))
+
+   def get_digest(self, tname, lv, idx, length):
+      rst = []
+      self._s.send("get_lv_hash %s %d %d %d\n" % (tname, lv, idx, length))
+      for l in self.readlines():
+         if l == "nack":
+            return []
+         if l == "ack":
+            return rst
+         rst.append(l)
+
+   def get_segment(self, tname, idx):
+      rst = {}
+      self._s.send("get_seg %s %d\n" % (tname, idx))
+      for l in self.readlines():
+         if l == "nack":
+            return {}
+         if l == "ack":
+            return rst;
+         k,v = l.split(' ', 1)
+         rst[k] = v
+
+   def close(self):
+      self._s.close()
+
+class HashtreeComparator():
+   def __init__(self, node1, node2):
+      self._n1 = node1
+      self._n2 = node2
+   
+   def _lv0_diff(self, tname):
+      r1 = self._n1.get_digest(tname, 0, 0, 1)
+      r2 = self._n2.get_digest(tname, 0, 0, 1)
+      if r1[0] == r2[0]:
+         return {}
+      return {0 : r1 + r2}
+
+   def _lv1_diff(self, tname):
+      r = {}
+      r1 = self._n1.get_digest(tname, 1, 0, 1024)
+      r2 = self._n2.get_digest(tname, 1, 0, 1024)
+      for i in xrange(0, 1024):
+         if r1[i] != r2[i]:
+            r[i] = [r1[i], r2[i]]
+      return r
+   
+   def _lv2_diff(self, tname, idx):
+      r = {}
+      r1 = self._n1.get_digest(tname, 2, idx, 1024)
+      r2 = self._n2.get_digest(tname, 2, idx, 1024)
+      for i in xrange(0, 1024):
+         if r1[i] != r2[i]:
+            r[i] = [r1[i], r2[i]]
+      return r
+
+   def _seg_diff(self, tname, idx):
+      r = {}
+      r1 = self._n1.get_segment(tname, idx)
+      r2 = self._n2.get_segment(tname, idx)
+      ks1 = set(r1.keys())
+      ks2 = set(r2.keys())
+      comm = ks1.intersection(ks2)
+      for i in comm:
+         if r1[i] != r2[i]:
+            r[i] = [r1[i], r2[i]]
+      diff = ks1.difference(ks2)
+      for i in diff:
+         r[i] = [r1[i], None]
+      diff = ks2.difference(ks2)
+      for i in diff:
+         r[i] = [None, r2[i]]
+      return r
+
+
+   def diff(self, tname):
+      r = self._lv0_diff(tname)
+      if r:
+         r = self._lv1_diff(tname)
+         for i in r.keys():
+            t0 = self._lv2_diff(tname, 1024 * i)
+            for j in t0.keys():
+               s0 = self._seg_diff(tname, 1024 * i + j)
+               for m in s0.keys():
+                  print m, " : ", s0[m]
+
+if __name__ == '__main__':
+   nc1 = NodeClient('127.0.0.1', 9999)
+   nc2 = NodeClient('127.0.0.2', 9999)
+   cmp = HashtreeComparator(nc1, nc2)
+   cmp.diff('sinfo')
+   nc1.close()
+   nc2.close()

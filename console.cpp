@@ -4,11 +4,14 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "hashtree.h"
+#include "XmlPath.h"
+#include "debug.h"
 using namespace std;
 
 #define CONSOLE_TIMEOUT 1200      //seconds
@@ -230,11 +233,21 @@ console_main_loop(void *argv)
    int sa, sw;
    int port;
 
+   XmlDocument doc;
+   XmlPath confPath = doc.loadFile("./nodetool.xml", "conf");
+   if(!confPath.valid())
+   {
+      debug("_update_filter_list: fail to load msg_client.xml\n");
+      return NULL;
+   }
+   string ip = confPath.getString("console/ip");
+   unsigned int p = confPath.getNumber("console/port");
+ 
    pe = getprotobyname("tcp");
    sa = socket(AF_INET, SOCK_STREAM, pe->p_proto);
    sar.sin_family = AF_INET;
-   sar.sin_addr.s_addr = INADDR_ANY;
-   sar.sin_port = htons(9999);
+   inet_aton(ip.c_str(), &sar.sin_addr);
+   sar.sin_port = htons(p);
    int val = 1;
    setsockopt(sa, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)); 
    bind(sa, (sockaddr *)&sar, sizeof(sockaddr_in));

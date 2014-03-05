@@ -91,10 +91,10 @@ MYSQL *
 _create_conn()
 {
    XmlDocument doc;
-   XmlPath confPath = doc.loadFile("./msg_client.xml", "conf");
+   XmlPath confPath = doc.loadFile("./nodetool.xml", "conf");
    if(!confPath.valid())
    {
-      debug("_update_filter_list: fail to load msg_client.xml\n");
+      debug("_update_filter_list: fail to load nodetool.xml\n");
       return NULL;
    }
    string ip = confPath.getString("metadata-db/ip");
@@ -166,7 +166,7 @@ static
 void*
 _receive_msg(void* argv)
 {
-   string xml="./msg_client.xml";
+   string xml="./nodetool.xml";
    MsgSubClientReceiver receiver(xml);
    receiver.run();
    return NULL;

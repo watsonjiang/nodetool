@@ -17,5 +17,9 @@
       <port>3306</port>
       <db>myshard_metadata1</db>
    </metadata-db>
+   <console>
+      <ip>127.0.0.1</ip>
+      <port>9999</port>
+   </console>
 </conf>
 
