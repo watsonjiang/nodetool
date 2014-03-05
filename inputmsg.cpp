@@ -13,6 +13,7 @@
 #include "filtermsg.h"
 #include "my_global.h"
 #include "mysql.h"
+#include "XmlPath.h"
 using namespace std;
 
 typedef map<string, string> msg_t;
@@ -85,24 +86,45 @@ _filter_func_number(const std::string& val)
    return val;
 }
 
+static
+MYSQL *
+_create_conn()
+{
+   XmlDocument doc;
+   XmlPath confPath = doc.loadFile("./msg_client.xml", "conf");
+   if(!confPath.valid())
+   {
+      debug("_update_filter_list: fail to load msg_client.xml\n");
+      return NULL;
+   }
+   string ip = confPath.getString("metadata-db/ip");
+   string user = confPath.getString("metadata-db/user");
+   string pass = confPath.getString("metadata-db/pass");
+   unsigned int port = confPath.getNumber("metadata-db/port");
+   string db = confPath.getString("metadata-db/db");
+   MYSQL * con = mysql_init(NULL);
+   if(NULL == con)
+   {
+      debug("update_filter_list: init mysql con fail. %s\n", mysql_error(con));
+      return NULL;
+   }
+   if(mysql_real_connect(con, ip.c_str(), user.c_str(), pass.c_str(),
+                          db.c_str(), port, NULL, 0) == NULL)
+   {
+      debug("update_filter_list: fail to connect mysql. %s\n", mysql_error(con));
+      mysql_close(con);
+      return NULL;
+   }
+   return con;  
+}
 
 static
 void
 _update_filter_list()
 {
-   MYSQL * con = mysql_init(NULL);
+   MYSQL * con = _create_conn();
    if(NULL == con)
-   {
-      debug("update_filter_list: init mysql con fail. %s\n", mysql_error(con));
       return;
-   }
-   if(mysql_real_connect(con, "172.19.34.40", "myshard", "myshard",
-                          "myshard_metadata1", 3306, NULL, 0) == NULL)
-   {
-      debug("update_filter_list: fail to connect mysql. %s\n", mysql_error(con));
-      mysql_close(con);
-      return;
-   }
    if(mysql_query(con, 
             "select "
             "table_name, column_name, data_type "

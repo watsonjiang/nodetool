@@ -10,5 +10,12 @@
          <tbl>sinfo</tbl>
       </subscribe_table>
    </msgclient>
+   <metadata-db>
+      <ip>172.19.34.40</ip>
+      <user>myshard</user>
+      <pass>myshard</pass>
+      <port>3306</port>
+      <db>myshard_metadata1</db>
+   </metadata-db>
 </conf>
 
