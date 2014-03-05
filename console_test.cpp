@@ -28,6 +28,7 @@ test_update()
    update(stdout, 1, p);
 }
 
+
 int
 main()
 {

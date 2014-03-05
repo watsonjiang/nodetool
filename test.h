@@ -1,5 +1,6 @@
 #ifndef __TEST_H__
 #define __TEST_H__
+#include <stdio.h>
 #include <stdlib.h>
 #define TEST_ASSERT(a, b) \
    if(!(a)) \

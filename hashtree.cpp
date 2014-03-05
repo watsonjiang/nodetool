@@ -335,18 +335,19 @@ hashtree_get_segment(const char * tname, unsigned int idx)
    unsigned int alloc_size = 1024; 
    hashtree_segment_t seg = 
           (hashtree_segment_t)malloc(sizeof(char) * alloc_size); 
+   hashtree_segment_entry_t tmp;
+   int ENTRY_PREFIX_LEN = (char*)&tmp.kstart - (char*)&tmp;
    unsigned int offset = 0; 
    for(it->Seek(starget); it->Valid(); it->Next())
    {
       HashKey* key = (HashKey*)it->key().data();
-      int ksize = it->key().size();
+      int rk_size = it->key().size() - HASHKEY_PREFIX_LEN;
       hashtree_digest_t* digest = (hashtree_digest_t*)it->value().data();
       if(key->seg_num != idx)
       {
          break;
       }
-      unsigned int entry_size = sizeof(hashtree_segment_entry_t)
-                 - 2 + ksize - 68;
+      unsigned int entry_size = ENTRY_PREFIX_LEN + rk_size;
       if(offset + entry_size >= alloc_size)
       {
          hashtree_segment_t t = 
@@ -358,10 +359,11 @@ hashtree_get_segment(const char * tname, unsigned int idx)
       hashtree_segment_entry_t* s_it = 
                     (hashtree_segment_entry_t*)((char*)seg+offset);
       memcpy(s_it->digest, digest, sizeof(hashtree_digest_t));
-      s_it->ksize = ksize - 68;
-      memcpy(&s_it->kstart, key->row_key_start, s_it->ksize);
+      s_it->ksize = rk_size;
+      memcpy(&s_it->kstart, &key->row_key_start, s_it->ksize);
       offset = offset + entry_size; 
    }
+   //finally, put a 'NULL' tag at the end.
    if(offset + sizeof(hashtree_segment_entry_t) >= alloc_size)
    {
       hashtree_segment_t t = 

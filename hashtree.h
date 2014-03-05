@@ -8,6 +8,7 @@ struct hashtree_segment_entry_st
    unsigned int ksize;
    void * kstart;
 };
+
 typedef void* hashtree_segment_t;  //a big mem block of entries.
                                    //end with a empty entry.
 

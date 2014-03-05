@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "hashtree.h"
@@ -50,13 +51,14 @@ update(int fd, int argc, char** argv)
    {
       string ans("update: expect only 1 argument.\n");
       ht_write(fd, ans.c_str(), ans.length());
+      ht_write(fd, "nack\n", 5);
       return;
    }
    ht_hand_out();
    char * tname = argv[0];
    hashtree_update(tname);
-   ht_write(fd, "ack\n", 4);
    ht_get_back();
+   ht_write(fd, "ack\n", 4);
 }
 
 void 
@@ -66,12 +68,14 @@ get_lv_hash(int fd, int argc, char** argv)
    {
       string ans("get_lv_hash: expect at least 2 arguments\n");
       ht_write(fd, ans.c_str(), ans.length());
+      ht_write(fd, "nack\n", 5);
       return;
    }
    if(argc > 4)
    {
       string ans("get_lv_hash: expect no more than 4 arguments\n");
       ht_write(fd, ans.c_str(), ans.length());
+      ht_write(fd, "nack\n", 5);
       return;
    }
    char* tname = argv[0];
@@ -96,6 +100,7 @@ get_lv_hash(int fd, int argc, char** argv)
       ht_write(fd, "\n", 1);
    }
    free(rst);
+   ht_write(fd, "ack\n", 4);
 
    return ;
 }
@@ -103,6 +108,30 @@ get_lv_hash(int fd, int argc, char** argv)
 void
 get_seg(int fd, int argc, char** argv)
 {
+   if(argc != 2)
+   {
+      string ans("get_seg: expect two arguments.");
+      ht_write(fd, ans.c_str(), ans.length());
+      ht_write(fd, "nack\n", 5);
+   }
+   char* tname = argv[0];
+   int idx = atoi(argv[1]);
+   hashtree_segment_t seg = hashtree_get_segment(tname, idx);
+   hashtree_segment_entry_t* s_it = (hashtree_segment_entry_t*) seg;
+   int ENTRY_PREFIX_LEN = ((char*)&s_it->kstart - (char*)s_it);
+   while(s_it->ksize != 0)
+   {
+      char hex_dg[80] = {0};
+      hashtree_digest_to_hex(s_it->digest, hex_dg);
+      char * buf = (char*) malloc(sizeof(char) * (s_it->ksize+1+1+80)); 
+      sprintf(buf, "%s %s", &s_it->kstart, hex_dg);
+      ht_write(fd, buf, strlen(buf));
+      ht_write(fd, "\n", 1);
+      free(buf);
+      //move to next entry.
+      s_it = (hashtree_segment_entry_t*)((char*)seg + ENTRY_PREFIX_LEN + s_it->ksize); 
+   } 
+   ht_write(fd, "ack\n", 4);
    return;
 }
 
@@ -188,7 +217,7 @@ console_session(void* argv)
 }
 
 void*
-console_main(void *argv)
+console_main_loop(void *argv)
 {
    ht_attr_t attr;
    attr = ht_attr_new();
@@ -216,4 +245,15 @@ console_main(void *argv)
       sw = ht_accept(sa, (sockaddr*)&peer_addr, &peer_len);
       ht_spawn(attr, console_session, (void*)sw); 
    }
+}
+
+void
+console_start()
+{
+   ht_attr_t attr;
+   ht_attr_set(attr, HT_ATTR_NAME, "console");
+   ht_attr_set(attr, HT_ATTR_JOINABLE, TRUE);
+   ht_t t = ht_spawn(attr, console_main_loop, NULL);
+
+   ht_join(t, NULL); //wait until exit.
 }
