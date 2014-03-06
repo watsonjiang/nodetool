@@ -11,19 +11,26 @@ CXXFLAGS=-I leveldb/include \
          -I /home/watson/myshard/trunk/hadb_publisher \
          -fpermissive \
          -D_DEBUG_ \
+         -fPIC \
          -g
 
 OBJS=hashtree.o inputmsg.o console.o readline.o filtermsg.o
 
-BINS=nodetool
+BINS=nodemon
+
+LIBS=pyaae.so
 
 TESTBINS=console_test hashtree_test filtermsg_test inputmsg_test
 
-all:$(BINS)
+#all:$(BINS) $(LIBS)
+all:$(LIBS)
 
 test:$(TESTBINS)
 
-nodetool:nodetool.o $(OBJS) libmsgclient.a libsox.a libconfig.a
+pyaae.so: pywrapper.o $(OBJS) libmsgclient.a libsox.a libconfig.a
+	g++ --shared $(LDFLAGS) -o $@ $^ 
+
+nodemon:nodemon.o $(OBJS) libmsgclient.a libsox.a libconfig.a
 	g++ $(LDFLAGS) -o $@ $^
 
 console_test:console_test.o $(OBJS) libmsgclient.a libsox.a libconfig.a 
@@ -38,7 +45,10 @@ filtermsg_test:filtermsg_test.o $(OBJS) libmsgclient.a libsox.a libconfig.a
 inputmsg_test:inputmsg_test.o $(OBJS) libmsgclient.a libsox.a libconfig.a 
 	g++ $(LDFLAGS) -o $@ $^
 
+pywrapper.o:pywrapper.cpp
+	g++ -I/usr/include/python2.7 $(CXXFLAGS) -c -o $@ $^
+
 clean:
-	rm -rf *.o $(BINS) $(TESTBINS)
+	rm -rf *.o $(TESTBINS) $(LIBS)
 
 .PHONY:all clean test

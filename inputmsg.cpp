@@ -91,7 +91,7 @@ MYSQL *
 _create_conn()
 {
    XmlDocument doc;
-   XmlPath confPath = doc.loadFile("./nodetool.xml", "conf");
+   XmlPath confPath = doc.loadFile("./nodemon.xml", "conf");
    if(!confPath.valid())
    {
       debug("_update_filter_list: fail to load nodetool.xml\n");
@@ -166,7 +166,7 @@ static
 void*
 _receive_msg(void* argv)
 {
-   string xml="./nodetool.xml";
+   string xml="./nodemon.xml";
    MsgSubClientReceiver receiver(xml);
    receiver.run();
    return NULL;
@@ -176,23 +176,6 @@ static
 void *
 _msg_puller(void* arv)
 {
-   /* read file */
-//   ifstream file("data.txt");
-//   string str;
-//   SHA1_CTX ctx;
-//   hashtree_digest_t digest;
-//   while(getline(file, str))
-//   {
-//      size_t pos = str.find_first_of('\t');
-//      string key = str.substr(0, pos-1);
-//      string value = str.substr(pos+1);
-//      SHA1_Init(&ctx);
-//      SHA1_Update(&ctx, (const unsigned char *)value.c_str(), value.length());
-//      SHA1_Final(&ctx, digest);
-//      hashtree_insert("data", key.length(), key.c_str(),
-//                      digest);
-//   }
-
    pthread_t t;
    pthread_create(&t, NULL, _receive_msg, NULL); 
    while(1)

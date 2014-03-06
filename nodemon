@@ -1,0 +1,8 @@
+import pyaae
+
+if __name__ == '__main__':
+   pyaae.hashtree_init()
+   pyaae.ht_init()
+   pyaae.msgpuller_start()
+   pyaae.console_start()
+   pyaae.hashtree_destroy()

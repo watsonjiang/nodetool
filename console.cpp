@@ -21,9 +21,6 @@ ssize_t ht_readline_ev(int fd, void *buf, size_t buflen, ht_event_t ev_extra);
 
 typedef void (*cmd_func_t)(int fd, int argc, char** argv);
 
-void get_lv_hash(int fd, int argc, char** argv);
-void get_seg(int fd, int argc, char** argv);
-void update(int fd, int argc, char** argv);
 
 typedef struct console_cmd_st console_cmd_t;
 struct console_cmd_st 
@@ -32,23 +29,14 @@ struct console_cmd_st
    cmd_func_t cmd_func; 
 };
 
-static console_cmd_t _cmd_list[] = {
-   {
-      "get_lv_hash",
-      get_lv_hash
-   },
-   {
-      "get_seg",
-      get_seg
-   },
-   {
-      "update",
-      update
-   }
-};
+void
+console_cmd_rebuild(int fd, int argc, char** argv)
+{
+   
+}
 
 void
-update(int fd, int argc, char** argv)
+console_cmd_update(int fd, int argc, char** argv)
 {
    if(argc != 1)
    {
@@ -65,7 +53,7 @@ update(int fd, int argc, char** argv)
 }
 
 void 
-get_lv_hash(int fd, int argc, char** argv)
+console_cmd_get_lv_hash(int fd, int argc, char** argv)
 {
    if(argc < 2)
    {
@@ -109,7 +97,7 @@ get_lv_hash(int fd, int argc, char** argv)
 }
 
 void
-get_seg(int fd, int argc, char** argv)
+console_cmd_get_seg(int fd, int argc, char** argv)
 {
    if(argc != 2)
    {
@@ -137,6 +125,25 @@ get_seg(int fd, int argc, char** argv)
    ht_write(fd, "ack\n", 4);
    return;
 }
+
+static console_cmd_t _cmd_list[] = {
+   {
+      "get_lv_hash",
+      console_cmd_get_lv_hash
+   },
+   {
+      "get_seg",
+      console_cmd_get_seg
+   },
+   {
+      "update",
+      console_cmd_update
+   },
+   {
+      "rebuild",
+      console_cmd_rebuild
+   }
+};
 
 void
 console_parse_cmd_line(char * line, int& argc, char**& argv)
@@ -189,6 +196,7 @@ console_session(void* argv)
       {
          string ans = "unknown command.\n";
          ht_write(fd, ans.c_str(), ans.length());
+         ht_write(fd, "nack\n", 5);
          free(argv);
          continue;
       }
@@ -213,6 +221,7 @@ console_session(void* argv)
       {
          string ans = "unknow command. \n";
          ht_write(fd, ans.c_str(), ans.length());
+         ht_write(fd, "nack\n", 5);
       }
       free(argv);
    }
@@ -234,10 +243,10 @@ console_main_loop(void *argv)
    int port;
 
    XmlDocument doc;
-   XmlPath confPath = doc.loadFile("./nodetool.xml", "conf");
+   XmlPath confPath = doc.loadFile("./nodemon.xml", "conf");
    if(!confPath.valid())
    {
-      debug("_update_filter_list: fail to load msg_client.xml\n");
+      debug("_update_filter_list: fail to load nodemon.xml\n");
       return NULL;
    }
    string ip = confPath.getString("console/ip");
@@ -264,6 +273,7 @@ void
 console_start()
 {
    ht_attr_t attr;
+   attr = ht_attr_new();
    ht_attr_set(attr, HT_ATTR_NAME, "console");
    ht_attr_set(attr, HT_ATTR_JOINABLE, TRUE);
    ht_t t = ht_spawn(attr, console_main_loop, NULL);
