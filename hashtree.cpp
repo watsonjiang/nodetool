@@ -118,9 +118,10 @@ hashtree_destroy(hashtree_t t)
 int
 hashtree_insert(hashtree_t t,
                 const char* tname,
-                unsigned int ksize, const char * key,
+                const char * key,
                 hashtree_digest_t hval)
 {
+   unsigned int ksize = strlen(key);
    leveldb::Slice sv((char*)hval, sizeof(hval));
    unsigned int k = HASHKEY_PREFIX_LEN + ksize;
    HashKey * tmp = (HashKey *)malloc(sizeof(char) * k);
@@ -154,8 +155,9 @@ hashtree_insert(hashtree_t t,
 int
 hashtree_remove(hashtree_t t,
                 const char* tname,
-                unsigned int ksize, const char * key)
+                const char * key)
 {
+   unsigned int ksize = strlen(key);
    unsigned int k = HASHKEY_PREFIX_LEN + ksize;
    HashKey * tmp = (HashKey *)malloc(sizeof(char) * k);
    memset(tmp, 0, k);

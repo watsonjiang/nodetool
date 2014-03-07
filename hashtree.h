@@ -22,11 +22,11 @@ typedef struct hashtree_st* hashtree_t;
 extern hashtree_t hashtree_new(const char *);
 extern int hashtree_insert(hashtree_t t,
                            const char * tname,
-                           unsigned int ksize, const char * key,
+                           const char * key,
                            hashtree_digest_t hval);
 extern int hashtree_remove(hashtree_t t,
                            const char * tname,
-                           unsigned int ksize, const char * key);
+                           const char * key);
 extern int hashtree_update(hashtree_t t,
                            const char * tname);
 extern int hashtree_get_digest(hashtree_digest_t * dst, 

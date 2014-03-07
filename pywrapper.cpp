@@ -66,9 +66,8 @@ py_hashtree_insert(PyObject* self, PyObject* args)
    char * key;
    char * digest;
    Py_ssize_t dsize;
-   if(!PyArg_ParseTuple(args, "sIss#", 
+   if(!PyArg_ParseTuple(args, "sss#", 
                         &tname,
-                        &ksize,
                         &key,
                         &digest,
                         &dsize))
@@ -79,7 +78,7 @@ py_hashtree_insert(PyObject* self, PyObject* args)
       PyErr_SetString(PyExc_TypeError, "digest length != 20");
       return NULL;
    }
-   hashtree_insert(t->t, tname, ksize, key, (hashtree_digest_t)digest);
+   hashtree_insert(t->t, tname, key, (hashtree_digest_t)digest);
    Py_RETURN_NONE;
 }
 
@@ -87,6 +86,9 @@ static
 PyObject*
 py_hashtree_remove(PyObject* self, PyObject* args)
 {
+   py_hashtree_t t = (py_hashtree_t)self;
+   char * tname;
+    
    Py_RETURN_NONE;
 }
 
