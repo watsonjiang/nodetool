@@ -1,8 +1,22 @@
+#!/usr/bin/python
 import pyaae
+import xml.etree.ElementTree as ET
 
-if __name__ == '__main__':
+def start():
    pyaae.hashtree_init()
    pyaae.ht_init()
-   pyaae.msgpuller_start()
-   pyaae.console_start()
+   pyaae.msgpuller_start('nodemon.xml')
+   i = get_console_info('nodemon.xml')
+   pyaae.console_start(*i)
    pyaae.hashtree_destroy()
+
+def get_console_info(xmlfile):
+   info = []
+   tree = ET.parse(xmlfile);
+   root = tree.getroot();
+   info.append(root.find('./console/ip').text)
+   info.append(int(root.find('./console/port').text))
+   return info 
+
+if __name__ == '__main__':
+   start()

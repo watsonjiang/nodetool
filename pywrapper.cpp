@@ -19,21 +19,29 @@ py_hashtree_destroy(PyObject *self, PyObject *args)
    hashtree_destroy();
 }
 
-extern void msg_puller_start();
+extern void msg_puller_start(const char * xmlfile);
 static
 PyObject *
 py_msg_puller_start(PyObject *self, PyObject *args)
 {
-   msg_puller_start();
+   char * xmlfile;
+   if(!PyArg_ParseTuple(args, "s", &xmlfile))
+      return NULL;
+   msg_puller_start(xmlfile);
    Py_RETURN_NONE; 
 }
 
-extern void console_start();
+extern void console_start(char *ip, unsigned int port);
 static
 PyObject *
 py_console_start(PyObject *self, PyObject *args)
 {
-   console_start();
+   char * ip;
+   unsigned int port; 
+   if(!PyArg_ParseTuple(args, "si", &ip, &port))
+      return NULL;
+ 
+   console_start(ip, port);
    Py_RETURN_NONE; 
 }
 
@@ -45,13 +53,11 @@ py_ht_init(PyObject *self, PyObject *args)
    Py_RETURN_NONE; 
 }
 
-
-
 static PyMethodDef module_methods[] = {
    {"hashtree_init", (PyCFunction)py_hashtree_init, METH_NOARGS, NULL},
    {"hashtree_destroy", (PyCFunction)py_hashtree_destroy, METH_NOARGS, NULL},
-   {"msgpuller_start", (PyCFunction)py_msg_puller_start, METH_NOARGS, NULL},
-   {"console_start", (PyCFunction)py_console_start, METH_NOARGS, NULL},
+   {"msgpuller_start", (PyCFunction)py_msg_puller_start, METH_VARARGS, NULL},
+   {"console_start", (PyCFunction)py_console_start, METH_VARARGS, NULL},
    {"ht_init", (PyCFunction)py_ht_init, METH_NOARGS, NULL},
    {NULL, NULL, 0, NULL}
 };

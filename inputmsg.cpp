@@ -164,9 +164,9 @@ _update_filter_list()
 
 static
 void*
-_receive_msg(void* argv)
+_msg_receive_loop(void* argv)
 {
-   string xml="./nodemon.xml";
+   string xml((char*)argv);
    MsgSubClientReceiver receiver(xml);
    receiver.run();
    return NULL;
@@ -174,11 +174,9 @@ _receive_msg(void* argv)
 
 static
 void *
-_msg_puller(void* arv)
+_filter_update_loop(void* arv)
 {
-   pthread_t t;
-   pthread_create(&t, NULL, _receive_msg, NULL); 
-   while(1)
+  while(1)
    {
       _update_filter_list();
       ht_sleep(10);
@@ -186,12 +184,16 @@ _msg_puller(void* arv)
 }
 
 void
-msg_puller_start()
+msg_puller_start(const char * xmlfile)
 {
    ht_attr_t attr;
    attr = ht_attr_new();
    ht_attr_set(attr, HT_ATTR_NAME, "msg_puller");
    ht_attr_set(attr, HT_ATTR_STACK_SIZE, 64*1024);
    ht_attr_set(attr, HT_ATTR_JOINABLE, FALSE);
-   ht_spawn(attr, _msg_puller, NULL);
+   ht_spawn(attr, _filter_update_loop, NULL);
+
+   pthread_t t;
+   pthread_create(&t, NULL, _msg_receive_loop, (void*)xmlfile); 
+ 
 }

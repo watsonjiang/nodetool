@@ -10,11 +10,12 @@
 #include <stdlib.h>
 #include <math.h>
 #include "hashtree.h"
-#include "XmlPath.h"
 #include "debug.h"
 using namespace std;
 
 #define CONSOLE_TIMEOUT 1200      //seconds
+#define CONSOLE_RET_ACK(fd) ht_write(fd, "ack\n", 4)
+#define CONSOLE_RET_NACK(fd) ht_write(fd, "nack\n", 5)
 
 /* from readline.c */
 ssize_t ht_readline_ev(int fd, void *buf, size_t buflen, ht_event_t ev_extra);
@@ -42,14 +43,14 @@ console_cmd_update(int fd, int argc, char** argv)
    {
       string ans("update: expect only 1 argument.\n");
       ht_write(fd, ans.c_str(), ans.length());
-      ht_write(fd, "nack\n", 5);
+      CONSOLE_RET_NACK(fd);
       return;
    }
    ht_hand_out();
    char * tname = argv[0];
    hashtree_update(tname);
    ht_get_back();
-   ht_write(fd, "ack\n", 4);
+   CONSOLE_RET_ACK(fd);
 }
 
 void 
@@ -59,14 +60,14 @@ console_cmd_get_lv_hash(int fd, int argc, char** argv)
    {
       string ans("get_lv_hash: expect at least 2 arguments\n");
       ht_write(fd, ans.c_str(), ans.length());
-      ht_write(fd, "nack\n", 5);
+      CONSOLE_RET_NACK(fd);
       return;
    }
    if(argc > 4)
    {
       string ans("get_lv_hash: expect no more than 4 arguments\n");
       ht_write(fd, ans.c_str(), ans.length());
-      ht_write(fd, "nack\n", 5);
+      CONSOLE_RET_NACK(fd);
       return;
    }
    char* tname = argv[0];
@@ -91,7 +92,7 @@ console_cmd_get_lv_hash(int fd, int argc, char** argv)
       ht_write(fd, "\n", 1);
    }
    free(rst);
-   ht_write(fd, "ack\n", 4);
+   CONSOLE_RET_ACK(fd);
 
    return ;
 }
@@ -103,7 +104,7 @@ console_cmd_get_seg(int fd, int argc, char** argv)
    {
       string ans("get_seg: expect two arguments.");
       ht_write(fd, ans.c_str(), ans.length());
-      ht_write(fd, "nack\n", 5);
+      CONSOLE_RET_NACK(fd);
    }
    char* tname = argv[0];
    int idx = atoi(argv[1]);
@@ -122,7 +123,7 @@ console_cmd_get_seg(int fd, int argc, char** argv)
       //move to next entry.
       s_it = (hashtree_segment_entry_t*)((char*)seg + ENTRY_PREFIX_LEN + s_it->ksize); 
    } 
-   ht_write(fd, "ack\n", 4);
+   CONSOLE_RET_ACK(fd);
    return;
 }
 
@@ -196,7 +197,7 @@ console_session(void* argv)
       {
          string ans = "unknown command.\n";
          ht_write(fd, ans.c_str(), ans.length());
-         ht_write(fd, "nack\n", 5);
+         CONSOLE_RET_NACK(fd);
          free(argv);
          continue;
       }
@@ -221,16 +222,23 @@ console_session(void* argv)
       {
          string ans = "unknow command. \n";
          ht_write(fd, ans.c_str(), ans.length());
-         ht_write(fd, "nack\n", 5);
+         CONSOLE_RET_NACK(fd);
       }
       free(argv);
    }
    return NULL;
 }
 
+struct _addr
+{
+   unsigned int port;
+   void* ip_start;
+};
+
 void*
 console_main_loop(void *argv)
 {
+   _addr* p = (_addr*) argv;
    ht_attr_t attr;
    attr = ht_attr_new();
    ht_attr_set(attr, HT_ATTR_STACK_SIZE, 64 * 1024);
@@ -241,22 +249,12 @@ console_main_loop(void *argv)
    int peer_len;
    int sa, sw;
    int port;
-
-   XmlDocument doc;
-   XmlPath confPath = doc.loadFile("./nodemon.xml", "conf");
-   if(!confPath.valid())
-   {
-      debug("_update_filter_list: fail to load nodemon.xml\n");
-      return NULL;
-   }
-   string ip = confPath.getString("console/ip");
-   unsigned int p = confPath.getNumber("console/port");
  
    pe = getprotobyname("tcp");
    sa = socket(AF_INET, SOCK_STREAM, pe->p_proto);
    sar.sin_family = AF_INET;
-   inet_aton(ip.c_str(), &sar.sin_addr);
-   sar.sin_port = htons(p);
+   inet_aton((char*)&p->ip_start, &sar.sin_addr);
+   sar.sin_port = htons(p->port);
    int val = 1;
    setsockopt(sa, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)); 
    bind(sa, (sockaddr *)&sar, sizeof(sockaddr_in));
@@ -270,13 +268,16 @@ console_main_loop(void *argv)
 }
 
 void
-console_start()
+console_start(char * ip, unsigned int port)
 {
+   _addr* p = (_addr*) malloc(sizeof(unsigned int) + strlen(ip) + 1);
+   p->port = port;
+   strcpy((char*)&p->ip_start, ip); 
    ht_attr_t attr;
    attr = ht_attr_new();
    ht_attr_set(attr, HT_ATTR_NAME, "console");
    ht_attr_set(attr, HT_ATTR_JOINABLE, TRUE);
-   ht_t t = ht_spawn(attr, console_main_loop, NULL);
+   ht_t t = ht_spawn(attr, console_main_loop, (void*)p);
 
    ht_join(t, NULL); //wait until exit.
 }
