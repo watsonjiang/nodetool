@@ -30,9 +30,9 @@ class MsgSubClientReceiver : public MsgSubClient
          if(op == 1)
          {
             //a delete op
-            int s = hashtree_remove(tname.c_str(), row_key.length(),
-                                row_key.c_str());
-            debug("handle_msg:s:%d del %s\n", s, row_key.c_str()); 
+            //TODO::int s = hashtree_remove(tname.c_str(), row_key.length(),
+            //                    row_key.c_str());
+            //debug("handle_msg:s:%d del %s\n", s, row_key.c_str()); 
             return true;
          }
          SHA1_CTX ctx;
@@ -58,9 +58,9 @@ class MsgSubClientReceiver : public MsgSubClient
          SHA1_Final(&ctx, digest);
          char buf[80] = {0};
          hashtree_digest_to_hex(digest, buf);
-         int s = hashtree_insert(tname.c_str(), row_key.length(), 
-                         row_key.c_str(), digest);
-         debug("handle_msg:s:%d set %s : %s\n", s, row_key.c_str(), buf);
+         //TODOint s = hashtree_insert(tname.c_str(), row_key.length(), 
+         //                row_key.c_str(), digest);
+         //debug("handle_msg:s:%d set %s : %s\n", s, row_key.c_str(), buf);
         
          return true;
       }

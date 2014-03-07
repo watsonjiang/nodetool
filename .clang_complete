@@ -3,3 +3,4 @@
 -I/home/watson/nodetool/sha1 
 -I/home/watson/nodetool/ht
 -I/usr/include
+-I/usr/include/python2.7

@@ -17,22 +17,29 @@ enum {
    HASHTREE_LV1,
    HASHTREE_LV2
 };
-extern int hashtree_init();
-extern int hashtree_insert(const char * tname,
+
+typedef struct hashtree_st* hashtree_t;
+extern hashtree_t hashtree_new(const char *);
+extern int hashtree_insert(hashtree_t t,
+                           const char * tname,
                            unsigned int ksize, const char * key,
                            hashtree_digest_t hval);
-extern int hashtree_remove(const char * tname,
+extern int hashtree_remove(hashtree_t t,
+                           const char * tname,
                            unsigned int ksize, const char * key);
-extern int hashtree_update(const char * tname);
+extern int hashtree_update(hashtree_t t,
+                           const char * tname);
 extern int hashtree_get_digest(hashtree_digest_t * dst, 
+                               hashtree_t t,
                                const char * tname, 
                                const int lv, 
                                const unsigned int start_idx, 
                                const unsigned int len);
-extern hashtree_segment_t hashtree_get_segment(const char * tname, 
+extern hashtree_segment_t hashtree_get_segment(hashtree_t t,
+                                               const char * tname, 
                                                unsigned int idx);
 extern void hashtree_release_segment(hashtree_segment_t segment);
 extern void hashtree_digest_to_hex(const hashtree_digest_t digest, 
                                    char * output);
-extern int hashtree_destroy();
+extern int hashtree_destroy(hashtree_t t);
 #endif //__MYSHARD_HASHTREE_H__

@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include "debug.h"
 #include <stdlib.h> //for exit(1)
-static leveldb::DB* _db;
-static leveldb::Comparator * _comparator;
 using namespace std;
 /*
  * The key struct used in myshard to build hashtree looks like this:
@@ -22,6 +20,13 @@ struct HashKey
    char table_name[64];
    unsigned int seg_num;
    void * row_key_start;
+};
+
+struct hashtree_st 
+{
+   char * name;
+   leveldb::DB * db;   
+   leveldb::Comparator * cmp;
 };
 
 class SegmentComparator
@@ -80,32 +85,39 @@ void hashtree_digest_to_hex(const hashtree_digest_t digest,
    *(c - 1) = '\0';
 }
 
-int
-hashtree_init()
+hashtree_t
+hashtree_new(const char * name)
 {
+   hashtree_t t = (hashtree_t)malloc(sizeof(struct hashtree_st));
+    
    leveldb::Options opt;
-   _comparator = new SegmentComparator();
-   opt.comparator = _comparator;
+   t->cmp = new SegmentComparator();
+   opt.comparator = t->cmp;
    opt.create_if_missing = true;
-   leveldb::Status s = leveldb::DB::Open(opt, "./db", &_db);
+   leveldb::Status s = leveldb::DB::Open(opt, name, &t->db);
    if(!s.ok())
    {
-      fprintf(stderr, "Fail to open leveldb file.");
-      exit(1);
-      return -1;
+      delete t->cmp;
+      free(t);
+      return NULL;
    }
-   return 0;
+   t->name = (char*)malloc(strlen(name) + 1);
+   strcpy(t->name, name);
+   return t;
 }
 
 int
-hashtree_destroy()
+hashtree_destroy(hashtree_t t)
 {
-   delete _db;
-   delete _comparator;
+   free(t->name);
+   delete t->cmp;
+   delete t->db;
+   free(t);
 }
 
 int
-hashtree_insert(const char* tname,
+hashtree_insert(hashtree_t t,
+                const char* tname,
                 unsigned int ksize, const char * key,
                 hashtree_digest_t hval)
 {
@@ -133,14 +145,15 @@ hashtree_insert(const char* tname,
    memcpy((char*)&tmp->row_key_start, key, ksize); 
    leveldb::Slice sk((char*)tmp, k); 
    leveldb::Status s =
-             _db->Put(leveldb::WriteOptions(), sk, sv); 
+             t->db->Put(leveldb::WriteOptions(), sk, sv); 
    free(tmp);
    debug("hashtree_insert: %s %s %s\n", s.ok() ? "ok" : "fail", tname, key);
    return !s.ok();
 }
 
 int
-hashtree_remove(const char* tname,
+hashtree_remove(hashtree_t t,
+                const char* tname,
                 unsigned int ksize, const char * key)
 {
    unsigned int k = HASHKEY_PREFIX_LEN + ksize;
@@ -166,7 +179,7 @@ hashtree_remove(const char* tname,
    memcpy((char*)&tmp->row_key_start, key, ksize); 
    leveldb::Slice sk((char*)tmp, k); 
    leveldb::Status s =
-              _db->Delete(leveldb::WriteOptions(), sk); 
+              t->db->Delete(leveldb::WriteOptions(), sk); 
    free(tmp);
    debug("hashtree_remove: %s %s %s\n", s.ok() ? "ok" : "fail", tname, key);
    return !s.ok();
@@ -174,8 +187,12 @@ hashtree_remove(const char* tname,
 
 static
 int
-_hashtree_put_lvx(const char * tname, const hashtree_digest_t* src, int lv,
-                  unsigned int start, unsigned int len)
+_hashtree_put_lvx(hashtree_t t,
+                  const char * tname, 
+                  const hashtree_digest_t* src, 
+                  int lv,
+                  unsigned int start, 
+                  unsigned int len)
 {
    int i = 0;
    HashKey* key = (HashKey*) malloc(sizeof(char) * 128);
@@ -189,14 +206,18 @@ _hashtree_put_lvx(const char * tname, const hashtree_digest_t* src, int lv,
       unsigned int k = HASHKEY_PREFIX_LEN + strlen(buf);
       leveldb::Slice sk((char *)key,HASHKEY_PREFIX_LEN+strlen(buf));
       leveldb::Slice sv((char *)src[start+i], sizeof(hashtree_digest_t));
-      _db->Put(leveldb::WriteOptions(), sk, sv);
+      t->db->Put(leveldb::WriteOptions(), sk, sv);
    }
 }
 
 static
 int 
-_hashtree_get_lvx(hashtree_digest_t * dst, const char * tname,
-                  const int lv, unsigned int start, unsigned int len)
+_hashtree_get_lvx(hashtree_digest_t * dst, 
+                  hashtree_t t,
+                  const char * tname,
+                  const int lv, 
+                  unsigned int start, 
+                  unsigned int len)
 {
    int i = 0;
    HashKey* key = (HashKey*) malloc(sizeof(char) * 128);
@@ -208,9 +229,9 @@ _hashtree_get_lvx(hashtree_digest_t * dst, const char * tname,
       sprintf(buf, "%s_%d_%d", tname,lv, start+i);
       strcpy((char*)&key->row_key_start, buf);
       leveldb::Slice sk((char *)key,HASHKEY_PREFIX_LEN + strlen(buf));
-      string t;
-      _db->Get(leveldb::ReadOptions(), sk, &t);
-      memcpy(dst[i], t.c_str(), sizeof(hashtree_digest_t));
+      string tmp;
+      t->db->Get(leveldb::ReadOptions(), sk, &tmp);
+      memcpy(dst[i], tmp.c_str(), sizeof(hashtree_digest_t));
    }
    return 0;
 }
@@ -223,7 +244,7 @@ _hashtree_get_lvx(hashtree_digest_t * dst, const char * tname,
  * The number of lv2 nodes is 1024 * 1024, each nodes is sha1sum of a segment.
  */
 int
-hashtree_update(const char * tname)
+hashtree_update(hashtree_t t, const char * tname)
 {
    hashtree_digest_t lv0;
    hashtree_digest_t *lv1 = NULL;
@@ -235,8 +256,8 @@ hashtree_update(const char * tname)
    //update lv2 hash node.
    // create a snapshot, so we don't break the insert().
    leveldb::ReadOptions opt;
-   opt.snapshot = _db->GetSnapshot();
-   leveldb::Iterator *it = _db->NewIterator(opt);
+   opt.snapshot = t->db->GetSnapshot();
+   leveldb::Iterator *it = t->db->NewIterator(opt);
    unsigned int curr_seg_idx = 0;
    SHA1_CTX ctx;
    SHA1_Init(&ctx);
@@ -277,14 +298,14 @@ hashtree_update(const char * tname)
    SHA1_Final(&ctx, lv2[curr_seg_idx]);
    curr_seg_idx ++;
    delete it;
-   _db->ReleaseSnapshot(opt.snapshot);
+   t->db->ReleaseSnapshot(opt.snapshot);
    while(curr_seg_idx < 1024 * 1024)
    {
       SHA1_Init(&ctx);
       SHA1_Final(&ctx, lv2[curr_seg_idx]);
       curr_seg_idx++;
    }
-   _hashtree_put_lvx(tname, lv2, HASHTREE_LV2, 0, 1024*1024); 
+   _hashtree_put_lvx(t, tname, lv2, HASHTREE_LV2, 0, 1024*1024); 
    //update lv1 hash node.
    for(int i = 0; i < 1024; i++)
    {
@@ -295,7 +316,7 @@ hashtree_update(const char * tname)
       }
       SHA1_Final(&ctx, lv1[i]);
    }
-   _hashtree_put_lvx(tname, lv1, HASHTREE_LV1, 0, 1024);
+   _hashtree_put_lvx(t, tname, lv1, HASHTREE_LV1, 0, 1024);
    //update lv0 hash node.
    SHA1_Init(&ctx);
    for(int i = 0; i < 1024; i++)
@@ -308,25 +329,26 @@ hashtree_update(const char * tname)
    hashtree_digest_to_hex(lv0, buf);
    debug("hashtree_update: %s digest %s\n", tname, buf);
 #endif
-   _hashtree_put_lvx(tname, &lv0, HASHTREE_LV0, 0, 1);
+   _hashtree_put_lvx(t, tname, &lv0, HASHTREE_LV0, 0, 1);
 }
 
 int
 hashtree_get_digest(hashtree_digest_t * dst,
+                    hashtree_t t, 
                     const char * tname,
                     const int lv,
                     const unsigned int start_idx,
                     const unsigned int len)
 {
-  return _hashtree_get_lvx(dst, tname, lv, start_idx, len); 
+  return _hashtree_get_lvx(dst, t, tname, lv, start_idx, len); 
 }
 
 hashtree_segment_t
-hashtree_get_segment(const char * tname, unsigned int idx)
+hashtree_get_segment(hashtree_t t, const char * tname, unsigned int idx)
 {
    leveldb::ReadOptions opt;
-   opt.snapshot = _db->GetSnapshot();
-   leveldb::Iterator *it = _db->NewIterator(opt);
+   opt.snapshot = t->db->GetSnapshot();
+   leveldb::Iterator *it = t->db->NewIterator(opt);
    HashKey start;
    strcpy(start.table_name, tname);
    start.seg_num = idx;

@@ -48,7 +48,7 @@ console_cmd_update(int fd, int argc, char** argv)
    }
    ht_hand_out();
    char * tname = argv[0];
-   hashtree_update(tname);
+   //TODOhashtree_update(tname);
    ht_get_back();
    CONSOLE_RET_ACK(fd);
 }
@@ -83,7 +83,7 @@ console_cmd_get_lv_hash(int fd, int argc, char** argv)
       len = atoi(argv[3]);
    }
    hashtree_digest_t* rst = (hashtree_digest_t*)malloc(sizeof(hashtree_digest_t) * len);
-   hashtree_get_digest(rst, tname, lv, start, len);
+   //TODOhashtree_get_digest(rst, tname, lv, start, len);
    for(int i = 0; i < len; i++)
    {
       char buf[80] = {0};
@@ -108,8 +108,10 @@ console_cmd_get_seg(int fd, int argc, char** argv)
    }
    char* tname = argv[0];
    int idx = atoi(argv[1]);
-   hashtree_segment_t seg = hashtree_get_segment(tname, idx);
-   hashtree_segment_entry_t* s_it = (hashtree_segment_entry_t*) seg;
+   //TODOhashtree_segment_t seg = hashtree_get_segment(tname, idx);
+   //hashtree_segment_entry_t* s_it = (hashtree_segment_entry_t*) seg;
+   hashtree_segment_t seg = NULL;
+   hashtree_segment_entry_t* s_it = NULL; 
    int ENTRY_PREFIX_LEN = ((char*)&s_it->kstart - (char*)s_it);
    while(s_it->ksize != 0)
    {
