@@ -1,27 +1,27 @@
 #include "sha1.h"
-#include "ht.h"
 #include <string>
 #include <string.h>
-#include <fstream>
 #include "hashtree.h"
 #include <pthread.h>
-#include <queue>
 #include "msg_client_framework/MsgSubClient.h"
 #include "msg_common/PMsgConst.h"
 #include <boost/algorithm/string/predicate.hpp>
 #include "debug.h"
 #include "filtermsg.h"
-#include "my_global.h"
-#include "mysql.h"
-#include "XmlPath.h"
 using namespace std;
 
 typedef map<string, string> msg_t;
 
 class MsgSubClientReceiver : public MsgSubClient
 {
+   private:
+      hashtree_t _hashtree;
+      filter_list_t _filter;
    public:
-      MsgSubClientReceiver(const string& xml): MsgSubClient(xml) {}
+      MsgSubClientReceiver(const string& xml, hashtree_t t, filter_list_t f)
+           : MsgSubClient(xml), _hashtree(t), _filter(f) 
+      {
+      }
       virtual bool handleMsg(const map<string, string>& msg)
       {
          string tname = msg.at(SQ_MSG_KEY_TABLE_NAME); 
@@ -45,9 +45,9 @@ class MsgSubClientReceiver : public MsgSubClient
                continue;  //ignore system keys.
             }
             string val = it->second;
-            printf("handle_msg: %s : %s\n", it->first.c_str(), it->second.c_str());
+            debug("handle_msg: %s : %s\n", it->first.c_str(), it->second.c_str());
             //normalize the data using filter.
-            filter_func_t f = filter_list_get(tname.c_str(), it->first.c_str());
+            filter_func_t f = filter_list_get(_filter, tname.c_str(), it->first.c_str());
             if(NULL != f)
             {
                val = f(val); 
@@ -58,142 +58,39 @@ class MsgSubClientReceiver : public MsgSubClient
          SHA1_Final(&ctx, digest);
          char buf[80] = {0};
          hashtree_digest_to_hex(digest, buf);
-         //TODOint s = hashtree_insert(tname.c_str(), row_key.length(), 
-         //                row_key.c_str(), digest);
+         int s = hashtree_insert(_hashtree, tname.c_str(),
+                                 row_key.c_str(), digest);
          //debug("handle_msg:s:%d set %s : %s\n", s, row_key.c_str(), buf);
         
          return true;
       }
 };
 
-string
-_filter_func_datetime(const std::string& val)
+struct _arg_st
 {
-   if(val.empty())
-   {
-      return "0000-00-00 00:00:00";
-   }
-   return val;
-}
-
-string
-_filter_func_number(const std::string& val)
-{
-   if(val.empty())
-   {
-      return "0";
-   }
-   return val;
-}
-
-static
-MYSQL *
-_create_conn()
-{
-   XmlDocument doc;
-   XmlPath confPath = doc.loadFile("./nodemon.xml", "conf");
-   if(!confPath.valid())
-   {
-      debug("_update_filter_list: fail to load nodetool.xml\n");
-      return NULL;
-   }
-   string ip = confPath.getString("metadata-db/ip");
-   string user = confPath.getString("metadata-db/user");
-   string pass = confPath.getString("metadata-db/pass");
-   unsigned int port = confPath.getNumber("metadata-db/port");
-   string db = confPath.getString("metadata-db/db");
-   MYSQL * con = mysql_init(NULL);
-   if(NULL == con)
-   {
-      debug("update_filter_list: init mysql con fail. %s\n", mysql_error(con));
-      return NULL;
-   }
-   if(mysql_real_connect(con, ip.c_str(), user.c_str(), pass.c_str(),
-                          db.c_str(), port, NULL, 0) == NULL)
-   {
-      debug("update_filter_list: fail to connect mysql. %s\n", mysql_error(con));
-      mysql_close(con);
-      return NULL;
-   }
-   return con;  
-}
-
-static
-void
-_update_filter_list()
-{
-   MYSQL * con = _create_conn();
-   if(NULL == con)
-      return;
-   if(mysql_query(con, 
-            "select "
-            "table_name, column_name, data_type "
-            "from myshard_table_columns"))
-   {
-      debug("update_filter_list: fail to get data. %s\n", mysql_error(con));
-      mysql_close(con);
-      return;
-   }
-   MYSQL_RES *rst = mysql_store_result(con);
-   if(NULL == rst)
-   {
-      debug("update_filter_list: %s\n", mysql_error(con));
-      mysql_close(con);
-      return;
-   }
-   MYSQL_ROW row;
-   while((row=mysql_fetch_row(rst)))
-   {
-      //printf("%s : %s : %s\n", row[0], row[1], row[2]); 
-      if(strcasecmp(row[2], "datetime"))
-      {
-         filter_list_add(row[0], row[1], _filter_func_datetime);
-      }
-      else if(strcasecmp(row[2], "bigint"))
-      {
-         filter_list_add(row[0], row[1], _filter_func_number);
-      }
-      else if(strcasecmp(row[2], "integer"))
-      {
-         filter_list_add(row[0], row[1], _filter_func_number);
-      }
-   }
-   mysql_free_result(rst);
-   mysql_close(con);
-}
+   char * xml;
+   hashtree_t hashtree;
+   filter_list_t filter;
+};
 
 static
 void*
 _msg_receive_loop(void* argv)
 {
-   string xml((char*)argv);
-   MsgSubClientReceiver receiver(xml);
+   _arg_st* arg = (_arg_st*) argv;
+   MsgSubClientReceiver receiver(arg->xml, arg->hashtree, arg->filter);
+   free(arg);
    receiver.run();
    return NULL;
 }
 
-static
-void *
-_filter_update_loop(void* arv)
-{
-  while(1)
-   {
-      _update_filter_list();
-      ht_sleep(10);
-   }
-}
-
 void
-msg_puller_start(const char * xmlfile)
+msg_puller_start(const char * xmlfile, hashtree_t t, filter_list_t f)
 {
-   ht_attr_t attr;
-   attr = ht_attr_new();
-   ht_attr_set(attr, HT_ATTR_NAME, "msg_puller");
-   ht_attr_set(attr, HT_ATTR_STACK_SIZE, 64*1024);
-   ht_attr_set(attr, HT_ATTR_JOINABLE, FALSE);
-   ht_spawn(attr, _filter_update_loop, NULL);
-
-   pthread_t t;
-   pthread_create(&t, NULL, _msg_receive_loop, (void*)xmlfile); 
- 
+   _arg_st* arg = (_arg_st*) malloc(sizeof(_arg_st));
+   arg->xml = xmlfile;
+   arg->hashtree = t;
+   arg->filter = f;
+   pthread_t tid;
+   pthread_create(&tid, NULL, _msg_receive_loop, (void*)arg); 
 }

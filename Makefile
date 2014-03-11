@@ -1,12 +1,10 @@
 LDFLAGS=-lpthread \
-        -L ht -lht \
         -L leveldb -lleveldb \
         -L sha1 -lsha1 \
         -L mysql -lmysqlclient
 
 CXXFLAGS=-I leveldb/include \
          -I sha1 \
-         -I ht \
          -I mysql/mysql \
          -I /home/watson/myshard/trunk/hadb_publisher \
          -fpermissive \
@@ -14,13 +12,13 @@ CXXFLAGS=-I leveldb/include \
          -fPIC \
          -g
 
-OBJS=hashtree.o inputmsg.o console.o readline.o filtermsg.o
+OBJS=hashtree.o inputmsg.o filtermsg.o
 
 BINS=nodemon
 
 LIBS=pyaae.so
 
-TESTBINS=console_test hashtree_test filtermsg_test inputmsg_test
+TESTBINS=hashtree_test filtermsg_test inputmsg_test
 
 #all:$(BINS) $(LIBS)
 all:$(LIBS)

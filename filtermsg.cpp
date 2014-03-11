@@ -15,30 +15,48 @@ struct filter_entry_st
    char * colname;
    filter_func_t func;
 };
-static pthread_mutex_t _list_lock;
-static filter_list_t _filter_list = NULL;
-static int _list_capacity = 64;
-static int _list_size = 0;
 
-static
-void
-_filter_list_init()
+struct filter_list_st
 {
-   _filter_list = (filter_list_t) malloc(sizeof(filter_entry_t) * _list_capacity);  
-   _list_size = 0;
-   pthread_mutex_init(&_list_lock, NULL);
+   unsigned int capacity;
+   unsigned int size;
+   pthread_mutex_t lock;
+   filter_entry_t * list;
+};
+
+filter_list_t
+filter_list_new()
+{
+   filter_list_t l = (filter_list_t)malloc(sizeof(struct filter_list_st));
+   l->capacity = 64;
+   l->list = (filter_entry_t*)malloc(sizeof(filter_entry_t) * l->capacity);
+   l->size = 0;
+   pthread_mutex_init(&l->lock, NULL);
+   return l;
+}
+
+int
+filter_list_destroy(filter_list_t l)
+{
+   pthread_mutex_destroy(&l->lock);
+   free(l->list);
+   l->capacity = 0;
+   l->size = 0;
+   free(l);
 }
 
 static
 void
-_filter_list_enlarge()
+_filter_list_enlarge(filter_list_t l)
 {
-   int tmp_size = _list_capacity * 2;
-   filter_list_t tmp = (filter_list_t)malloc(sizeof(filter_entry_t) * tmp_size);
-   memcpy(tmp, _filter_list, sizeof(filter_entry_t) * _list_capacity);
-   free(_filter_list);
-   _filter_list = tmp;
-   _list_capacity = tmp_size;
+   // NOTE: l should be locked before entering this function
+   int tmp_size = l->capacity * 2;
+   filter_entry_t* tmp = 
+      (filter_entry_t*)malloc(sizeof(filter_entry_t) * tmp_size);
+   memcpy(tmp, l->list, sizeof(filter_entry_t) * l->capacity);
+   free(l->list);
+   l->list = tmp;
+   l->capacity = tmp_size;
 }
 
 int
@@ -55,65 +73,158 @@ _entry_cmp(const void * a, const void *b)
 }
 
 int
-filter_list_add(char * tname, char * colname, filter_func_t func)
+filter_list_add(filter_list_t l, char * tname, 
+                char * colname, filter_func_t func)
 {
-   pthread_mutex_lock(&_list_lock); 
-   if(_filter_list == NULL)
+   pthread_mutex_lock(&l->lock); 
+   while(l->size >= l->capacity)
    {
-      _filter_list_init();
-   }
-   while(_list_size >= _list_capacity)
-   {
-      _filter_list_enlarge();
+      _filter_list_enlarge(l);
    }
    char * t_tname = (char *)malloc(sizeof(char) * (strlen(tname) + 1));
    strcpy(t_tname, tname);
    char * t_colname = (char *)malloc(sizeof(char) * (strlen(colname) + 1));
    strcpy(t_colname, colname);
-   _filter_list[_list_size].colname = t_colname;
-   _filter_list[_list_size].tname = t_tname;
-   _filter_list[_list_size].func = func;
-   _list_size ++;
-   qsort(_filter_list, _list_size, sizeof(filter_entry_t), _entry_cmp);
-   pthread_mutex_unlock(&_list_lock);
+   l->list[l->size].colname = t_colname;
+   l->list[l->size].tname = t_tname;
+   l->list[l->size].func = func;
+   l->size ++;
+   qsort(l->list, l->size, sizeof(filter_entry_t), _entry_cmp);
+   pthread_mutex_unlock(&l->lock);
    return 0; 
 }
 
-filter_func_t filter_list_get(char * tname, char * colname)
+filter_func_t filter_list_get(filter_list_t l, char * tname, char * colname)
 {
-   pthread_mutex_lock(&_list_lock);
+   pthread_mutex_lock(&l->lock);
    filter_entry_t key;
    key.tname = tname;
    key.colname = colname;
 
-   filter_entry_t * rst = bsearch(&key, _filter_list, 
-                                  _list_size,
+   filter_entry_t * rst = bsearch(&key, l->list, 
+                                  l->size,
                                   sizeof(filter_entry_t), 
                                    _entry_cmp);
-   pthread_mutex_unlock(&_list_lock);
+   pthread_mutex_unlock(&l->lock);
    return rst == NULL ? NULL : rst->func;
 }
 
 int
-filter_list_rm(char * tname, char * colname)
+filter_list_rm(filter_list_t l, char * tname, char * colname)
 {
    /* due to rm is not happen so offen, 
       instead of pysically remove the entry,
       set the func to NULL. */
-   pthread_mutex_lock(&_list_lock);
+   pthread_mutex_lock(&l->lock);
    filter_entry_t key;
    key.tname = tname;
    key.colname = colname;
-   filter_entry_t * rst = bsearch(&key, _filter_list,
-                                  _list_size,
+   filter_entry_t * rst = bsearch(&key, l->list,
+                                  l->size,
                                   sizeof(filter_entry_t),
                                   _entry_cmp);
    if(NULL != rst)
    {
       rst->func = NULL;
    }
-   pthread_mutex_unlock(&_list_lock);
+   pthread_mutex_unlock(&l->lock);
    return 0;
 }
 
+std::string
+filter_func_datetime(const std::string& val)
+{
+   if(val.empty())
+   {
+      return "0000-00-00 00:00:00";
+   }
+   return val;
+}
+
+std::string
+filter_func_number(const std::string& val)
+{
+   if(val.empty())
+   {
+      return "0";
+   }
+   return val;
+}
+/*
+static
+MYSQL *
+_create_conn()
+{
+   XmlDocument doc;
+   XmlPath confPath = doc.loadFile("./nodemon.xml", "conf");
+   if(!confPath.valid())
+   {
+      debug("_update_filter_list: fail to load nodetool.xml\n");
+      return NULL;
+   }
+   string ip = confPath.getString("metadata-db/ip");
+   string user = confPath.getString("metadata-db/user");
+   string pass = confPath.getString("metadata-db/pass");
+   unsigned int port = confPath.getNumber("metadata-db/port");
+   string db = confPath.getString("metadata-db/db");
+   MYSQL * con = mysql_init(NULL);
+   if(NULL == con)
+   {
+      debug("update_filter_list: init mysql con fail. %s\n", mysql_error(con));
+      return NULL;
+   }
+   if(mysql_real_connect(con, ip.c_str(), user.c_str(), pass.c_str(),
+                          db.c_str(), port, NULL, 0) == NULL)
+   {
+      debug("update_filter_list: fail to connect mysql. %s\n", mysql_error(con));
+      mysql_close(con);
+      return NULL;
+   }
+   return con;  
+}
+
+static
+void
+_update_filter_list()
+{
+   MYSQL * con = _create_conn();
+   if(NULL == con)
+      return;
+   if(mysql_query(con, 
+            "select "
+            "table_name, column_name, data_type "
+            "from myshard_table_columns"))
+   {
+      debug("update_filter_list: fail to get data. %s\n", mysql_error(con));
+      mysql_close(con);
+      return;
+   }
+   MYSQL_RES *rst = mysql_store_result(con);
+   if(NULL == rst)
+   {
+      debug("update_filter_list: %s\n", mysql_error(con));
+      mysql_close(con);
+      return;
+   }
+   MYSQL_ROW row;
+   while((row=mysql_fetch_row(rst)))
+   {
+      //printf("%s : %s : %s\n", row[0], row[1], row[2]); 
+      if(strcasecmp(row[2], "datetime"))
+      {
+         filter_list_add(row[0], row[1], _filter_func_datetime);
+      }
+      else if(strcasecmp(row[2], "bigint"))
+      {
+         filter_list_add(row[0], row[1], _filter_func_number);
+      }
+      else if(strcasecmp(row[2], "integer"))
+      {
+         filter_list_add(row[0], row[1], _filter_func_number);
+      }
+   }
+   mysql_free_result(rst);
+   mysql_close(con);
+}
+*/
 
