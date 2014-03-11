@@ -35,8 +35,8 @@ class MsgSubClientReceiver : public MsgSubClient
             //debug("handle_msg:s:%d del %s\n", s, row_key.c_str()); 
             return true;
          }
-         SHA1_CTX ctx;
-         SHA1_Init(&ctx);
+         aae_SHA1_CTX ctx;
+         aae_SHA1_Init(&ctx);
          hashtree_digest_t digest = {0};
          for(msg_t::const_iterator it = msg.begin(); it != msg.end(); ++it)
          {
@@ -53,9 +53,9 @@ class MsgSubClientReceiver : public MsgSubClient
                val = f(val); 
             }
             //update the digest.
-            SHA1_Update(&ctx, (uint8_t*)val.c_str(), val.length());
+            aae_SHA1_Update(&ctx, (uint8_t*)val.c_str(), val.length());
          }
-         SHA1_Final(&ctx, digest);
+         aae_SHA1_Final(&ctx, digest);
          char buf[80] = {0};
          hashtree_digest_to_hex(digest, buf);
          int s = hashtree_insert(_hashtree, tname.c_str(),

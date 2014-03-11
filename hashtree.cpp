@@ -127,11 +127,11 @@ hashtree_insert(hashtree_t t,
    HashKey * tmp = (HashKey *)malloc(sizeof(char) * k);
    memset(tmp, 0, k);
    memcpy(tmp->table_name, tname, strlen(tname));
-   SHA1_CTX ctx;
-   SHA1_Init(&ctx);
+   aae_SHA1_CTX ctx;
+   aae_SHA1_Init(&ctx);
    hashtree_digest_t digest = {0};
-   SHA1_Update(&ctx, (uint8_t*)key, ksize);
-   SHA1_Final(&ctx, digest);
+   aae_SHA1_Update(&ctx, (uint8_t*)key, ksize);
+   aae_SHA1_Final(&ctx, digest);
    for(int i = 0; i < 20; i++) {
       if(digest[i] & 0x80 > 0)
       {
@@ -162,11 +162,11 @@ hashtree_remove(hashtree_t t,
    HashKey * tmp = (HashKey *)malloc(sizeof(char) * k);
    memset(tmp, 0, k);
    memcpy(tmp->table_name, tname, strlen(tname));
-   SHA1_CTX ctx;
-   SHA1_Init(&ctx);
+   aae_SHA1_CTX ctx;
+   aae_SHA1_Init(&ctx);
    hashtree_digest_t digest = {0};
-   SHA1_Update(&ctx, (uint8_t*)key, ksize);
-   SHA1_Final(&ctx, digest);
+   aae_SHA1_Update(&ctx, (uint8_t*)key, ksize);
+   aae_SHA1_Final(&ctx, digest);
    for(int i = 0; i < 20; i++) {
       if(digest[i] & 0x80 > 0)
       {
@@ -261,8 +261,8 @@ hashtree_update(hashtree_t t, const char * tname)
    opt.snapshot = t->db->GetSnapshot();
    leveldb::Iterator *it = t->db->NewIterator(opt);
    unsigned int curr_seg_idx = 0;
-   SHA1_CTX ctx;
-   SHA1_Init(&ctx);
+   aae_SHA1_CTX ctx;
+   aae_SHA1_Init(&ctx);
    HashKey target;
    strcpy(target.table_name, tname);
    target.seg_num = 0;
@@ -278,49 +278,49 @@ hashtree_update(hashtree_t t, const char * tname)
       }
       if(curr_seg_idx < key->seg_num)
       {
-         SHA1_Final(&ctx, lv2[curr_seg_idx]);
+         aae_SHA1_Final(&ctx, lv2[curr_seg_idx]);
          curr_seg_idx ++;
          while(curr_seg_idx < key->seg_num)
          {
-            SHA1_Init(&ctx);
-            SHA1_Final(&ctx, lv2[curr_seg_idx]);
+            aae_SHA1_Init(&ctx);
+            aae_SHA1_Final(&ctx, lv2[curr_seg_idx]);
             curr_seg_idx ++;
          }
-         SHA1_Init(&ctx);
+         aae_SHA1_Init(&ctx);
       }
-      SHA1_Update(&ctx, 
+      aae_SHA1_Update(&ctx, 
                  (const unsigned char*)it->value().data(), 
                  it->value().size());
    }
-   SHA1_Final(&ctx, lv2[curr_seg_idx]);
+   aae_SHA1_Final(&ctx, lv2[curr_seg_idx]);
    curr_seg_idx ++;
    delete it;
    t->db->ReleaseSnapshot(opt.snapshot);
    while(curr_seg_idx < 1024 * 1024)
    {
-      SHA1_Init(&ctx);
-      SHA1_Final(&ctx, lv2[curr_seg_idx]);
+      aae_SHA1_Init(&ctx);
+      aae_SHA1_Final(&ctx, lv2[curr_seg_idx]);
       curr_seg_idx++;
    }
    _hashtree_put_lvx(t, tname, lv2, HASHTREE_LV2, 0, 1024*1024); 
    //update lv1 hash node.
    for(int i = 0; i < 1024; i++)
    {
-      SHA1_Init(&ctx);   
+      aae_SHA1_Init(&ctx);   
       for(int j = 0; j < 1024; j++)
       {
-         SHA1_Update(&ctx, lv2[i*1024+j], sizeof(hashtree_digest_t));   
+         aae_SHA1_Update(&ctx, lv2[i*1024+j], sizeof(hashtree_digest_t));   
       }
-      SHA1_Final(&ctx, lv1[i]);
+      aae_SHA1_Final(&ctx, lv1[i]);
    }
    _hashtree_put_lvx(t, tname, lv1, HASHTREE_LV1, 0, 1024);
    //update lv0 hash node.
-   SHA1_Init(&ctx);
+   aae_SHA1_Init(&ctx);
    for(int i = 0; i < 1024; i++)
    {
-      SHA1_Update(&ctx, lv1[i], sizeof(hashtree_digest_t));   
+      aae_SHA1_Update(&ctx, lv1[i], sizeof(hashtree_digest_t));   
    }
-   SHA1_Final(&ctx, lv0);
+   aae_SHA1_Final(&ctx, lv0);
 #if _DEBUG_
    char buf[80] = {0};
    hashtree_digest_to_hex(lv0, buf);

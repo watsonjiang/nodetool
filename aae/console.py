@@ -38,6 +38,7 @@ def cmd_get_seg(tree, args):
 def cmd_update(tree, args):
    tname = args[1]
    tree.update(tname)
+   return ["ack"]
 
 CMD_DICT = {
    "get_lv_hash" : cmd_get_lv_hash,
