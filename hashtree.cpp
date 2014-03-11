@@ -276,11 +276,6 @@ hashtree_update(hashtree_t t, const char * tname)
       {
          break;
       }
-#if _DEBUG_
-      char buf[80] = {0};
-      memcpy(buf, &key->row_key_start, it->key().size() - HASHKEY_PREFIX_LEN);
-      debug("hashtree_update: found %s\n", buf);
-#endif
       if(curr_seg_idx < key->seg_num)
       {
          SHA1_Final(&ctx, lv2[curr_seg_idx]);

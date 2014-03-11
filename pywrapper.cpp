@@ -162,6 +162,7 @@ py_hashtree_get_segment(PyObject* self, PyObject* args)
       PyObject * row_key = PyString_FromStringAndSize((char*)&s_it->kstart,
                                  s_it->ksize);
       PyDict_SetItem(dict, row_key, digest);
+      s_it =(hashtree_segment_entry_t*) ((char*)s_it + ENTRY_PREFIX_LEN + s_it->ksize);
    }
    
    return dict;

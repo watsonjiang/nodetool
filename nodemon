@@ -1,19 +1,10 @@
 #!/usr/bin/python
 import xml.etree.ElementTree as ET
 from twisted.internet import task, protocol, reactor
-from aae import console, filterlist 
+from aae import AaeConsoleFactory, FilterList 
 from pyaae import Hashtree, Msgpuller
 
-
 CONF_FILE = 'nodemon.xml'
-
-def start_observer(xmlfile):
-   pyaae.hashtree_init()
-   pyaae.ht_init()
-   pyaae.msgpuller_start(xmlfile)
-   i = get_console_info(xmlfile)
-   pyaae.console_start(*i)
-   pyaae.hashtree_destroy()
 
 def get_console_info(xmlfile):
    info = []
@@ -37,12 +28,11 @@ def get_metadb_info(xmlfile):
 
 def update_filter_list():
    fl.update()
-   
 
 if __name__ == '__main__':
    ht = Hashtree("db") 
    info = get_metadb_info(CONF_FILE)
-   fl = filterlist.FilterList(info)
+   fl = FilterList(info)
    mp = Msgpuller(CONF_FILE, ht, fl._filterlist)
    #start msg puller
    mp.start()
@@ -50,8 +40,7 @@ if __name__ == '__main__':
    l = task.LoopingCall(update_filter_list)
    l.start(10)
    #start console
-   console.set_hashtree(ht)
    ip, port = get_console_info(CONF_FILE)
-   reactor.listenTCP(port, console.AaeConsoleFactory(), interface=ip) 
+   reactor.listenTCP(port, AaeConsoleFactory(ht), interface=ip) 
    reactor.run()
    
