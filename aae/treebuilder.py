@@ -1,0 +1,69 @@
+#!/usr/bin/python
+
+from pyaae import Hashtree
+import pyaae
+import hashlib
+
+class TreeBuilder:
+   def __init__(self, tree, tname):
+      self._name = tname
+      self._tree = tree
+
+   def add_entry(self, key, kv):
+      sk = sorted(kv)
+      h = hashlib.sha1()
+      for i in sk:
+         h.update(kv[i])
+      self._tree.insert(self._name, key, h.digest())
+    
+   def copy_tree(self, dst, src):
+      for i in xrange(0, 1024 * 1024):
+         t = dst.get_segment(self._name, i) 
+         for k in t:
+            dst.remove(self._name, k)
+         t = src.get_segment(self._name, i)
+         for k in t:
+            dst.insert(self._name, k, t[k])
+
+def build_tree_from_file(colinfo, file_, treebuilder):
+   for line in file_:
+      kv = pyaae.parse_line(colinfo, line)
+      sorted(kv)
+      h = hashlib.sha1()
+      for k, v in kv:
+         h.update(v)
+      treebuilder.add_entry(
+
+def tree_cmp(tname, t1, t2):
+   t1.update(tname)
+   t2.update(tname)
+   h1 = t1.get_digest(tname, 0) 
+   h2 = t2.get_digest(tname, 0)
+   if h1 == h2:
+      print "The Same."
+      return
+   h1 = t1.get_digest(tname, 1, 0, 1024)
+   h2 = t2.get_digest(tname, 1, 0, 1024)
+   for i in xrange(0, 1024):
+      if h1[i] != h2[i]:
+         print i
+         h3 = t1.get_digest(tname, 2, 1024*i, 1024)
+         h4 = t2.get_digest(tname, 2, 1024*i, 1024)
+         for j in xrange(0, 1024):
+            if h3[j] != h4[j]:
+               print j
+               s1 = t1.get_segment(tname, 1024*i+j)
+               s2 = t2.get_segment(tname, 1024*i+j)
+               ks1 = set(s1)
+               ks2 = set(s2)
+               c = ks1.intersection(ks2)
+               for k in c:
+                  if s1[k] != s2[k]:
+                     print k, s1[k].encode("hex"), s2[k].encode("hex")
+               d = ks1.symmetric_difference(ks2)
+               for k in d:
+                  if k in ks1:
+                     print k, ks1[k].encode("hex"), None
+                  else:
+                     print k, None, ks2[k].encode("hex")
+   return 

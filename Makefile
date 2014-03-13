@@ -1,16 +1,23 @@
 LDFLAGS=-lpthread \
         -L leveldb -lleveldb \
-        -L sha1 -lsha1 
+        -L sha1 -lsha1 \
+        -L mysql -lmysqlclient
+        
 
 CXXFLAGS=-I leveldb/include \
          -I sha1 \
          -I /home/watson/myshard/trunk/hadb_publisher \
          -fpermissive \
          -D_DEBUG_ \
+         -DYYDEBUG=1 \
          -fPIC \
          -g
 
-OBJS=hashtree.o inputmsg.o filtermsg.o
+YACC=bison
+
+LEX=flex
+
+OBJS=hashtree.o filtermsg.o dmpfileparser.lex.o dmpfileparser.yacc.o
 
 BINS=nodemon
 
@@ -23,25 +30,30 @@ all:$(LIBS)
 
 test:$(TESTBINS)
 
-pyaae.so: pywrapper.o $(OBJS) libmsgclient.a libsox.a libconfig.a
+pyaae.so: pywrapper.o $(OBJS) libshardpub.a libsox.a libconfig.a
 	g++ --shared $(LDFLAGS) -o $@ $^ 
 
-nodemon:nodemon.o $(OBJS) libmsgclient.a libsox.a libconfig.a
-	g++ $(LDFLAGS) -o $@ $^
-
-hashtree_test:hashtree_test.o $(OBJS) libmsgclient.a libsox.a libconfig.a 
-	g++ $(LDFLAGS) -o $@ $^
-
-filtermsg_test:filtermsg_test.o $(OBJS) libmsgclient.a libsox.a libconfig.a 
-	g++ $(LDFLAGS) -o $@ $^
-
-inputmsg_test:inputmsg_test.o $(OBJS) libmsgclient.a libsox.a libconfig.a 
-	g++ $(LDFLAGS) -o $@ $^
-
-pywrapper.o:pywrapper.cpp
-	g++ -I/usr/include/python2.7 $(CXXFLAGS) -c -o $@ $^
+pywrapper.o:pywrapper.cpp dmpfileparser.yacc.h
+	g++ -I/usr/include/python2.7 $(CXXFLAGS) -c -o $@ pywrapper.cpp
 
 clean:
-	rm -rf *.o $(TESTBINS) $(LIBS)
+	rm -rf *.o $(TESTBINS) $(LIBS) *.lex.cpp *.yacc.h *.yacc.cpp
+
+.cpp.o:
+	$(CXX) -I/usr/include/python2.7 -c ${CXXFLAGS} -o $@ $<
+   
+dmpfileparser.yacc.cpp dmpfileparser.yacc.h: dmpfileparser.y
+	$(YACC) -d $<
+	mv dmpfileparser.tab.c dmpfileparser.yacc.cpp
+	mv dmpfileparser.tab.h dmpfileparser.yacc.h
+
+dmpfileparser.lex.cpp: dmpfileparser.l dmpfileparser.yacc.h
+	$(LEX) $<
+	mv lex.yy.c dmpfileparser.lex.cpp
+
 
 .PHONY:all clean test
+
+.SUFFIXES:
+.SUFFIXES: .cpp .o .y .lex
+

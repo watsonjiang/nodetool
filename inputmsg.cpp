@@ -3,7 +3,7 @@
 #include <string.h>
 #include "hashtree.h"
 #include <pthread.h>
-#include "msg_client_framework/MsgSubClient.h"
+#include "framework/IMyshardPub.h"
 #include "msg_common/PMsgConst.h"
 #include <boost/algorithm/string/predicate.hpp>
 #include "debug.h"
@@ -12,17 +12,18 @@ using namespace std;
 
 typedef map<string, string> msg_t;
 
-class MsgSubClientReceiver : public MsgSubClient
+class MsgSubClientReceiver : public IMyshardPubHandler
 {
    private:
       hashtree_t _hashtree;
       filter_list_t _filter;
    public:
-      MsgSubClientReceiver(const string& xml, hashtree_t t, filter_list_t f)
-           : MsgSubClient(xml), _hashtree(t), _filter(f) 
+      MsgSubClientReceiver(hashtree_t t, filter_list_t f)
+           : _hashtree(t), _filter(f) 
       {
       }
-      virtual bool handleMsg(const map<string, string>& msg)
+
+      int32_t onMapMsgHandle(map<string, string>& msg)
       {
          string tname = msg.at(SQ_MSG_KEY_TABLE_NAME); 
          int op = atoi(msg.at(SQ_MSG_KEY_OP_TYPE).c_str());
@@ -62,7 +63,7 @@ class MsgSubClientReceiver : public MsgSubClient
                                  row_key.c_str(), digest);
          //debug("handle_msg:s:%d set %s : %s\n", s, row_key.c_str(), buf);
         
-         return true;
+         return 0;
       }
 };
 
@@ -78,9 +79,9 @@ void*
 _msg_receive_loop(void* argv)
 {
    _arg_st* arg = (_arg_st*) argv;
-   MsgSubClientReceiver receiver(arg->xml, arg->hashtree, arg->filter);
+   MsgSubClientReceiver receiver(arg->hashtree, arg->filter);
    free(arg);
-   receiver.run();
+   myshard_pub_main_run(arg->xml, &receiver);
    return NULL;
 }
 

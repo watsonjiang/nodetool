@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "hashtree.h"
 #include "filtermsg.h"
+#include "dmpfileparser.h"
 /* Hashtree */
 typedef struct py_hashtree_st* py_hashtree_t;
 struct py_hashtree_st
@@ -436,7 +437,7 @@ static
 PyObject*
 py_mp_start(py_mp_t self, PyObject* args)
 {
-   msg_puller_start(PyString_AsString(self->xmlfile), self->hashtree->t, self->filter->t);
+   //msg_puller_start(PyString_AsString(self->xmlfile), self->hashtree->t, self->filter->t);
    Py_RETURN_NONE; 
 }
 
@@ -490,8 +491,46 @@ PyTypeObject py_mp_type_obj = {
    py_mp_new,           /* tp_new */
 };
 
+typedef void* yyscan_t;
+extern int yylex_init (yyscan_t* scanner);
+extern int yylex_destroy (yyscan_t yyscanner );
+extern void yyset_in  (FILE * in_str ,yyscan_t yyscanner );
 static
-PyMethodDef module_methods[] = {NULL};
+PyObject*
+py_parse_dumpfile(PyObject* self, PyObject *args)
+{
+   char * filename;
+   PyObject * cb_handler;
+   if(!PyArg_ParseTuple(args, "sO", 
+                        &filename,
+                        &cb_handler))
+      return NULL;
+   FILE * fp = fopen(filename, "r");
+   if(!fp)
+   {
+      char buf[100] = {0};
+      snprintf(sizeof(buf), buf, "fail to open file [%s]", filename);
+      PyErr_SetString(PyExc_RuntimeError, buf);
+      return NULL;
+   }
+   //yydebug=1;
+   struct pass_to_bison x;
+   Py_INCREF(cb_handler);
+   x.cb_handler = cb_handler;
+   yylex_init(&x.scanner);
+   yyset_in(fp, x.scanner);
+   yyparse(&x);
+   yylex_destroy(x.scanner);
+   fclose(fp);
+   Py_DECREF(cb_handler);
+   Py_RETURN_NONE;
+}
+
+static
+PyMethodDef module_methods[] = {
+   {"parse_dumpfile", (PyCFunction)py_parse_dumpfile, METH_VARARGS, "parse the myshard data dump file."},
+   {NULL}
+};
 
 PyMODINIT_FUNC initpyaae() {
    PyObject *m;

@@ -232,11 +232,11 @@ void aae_SHA1_Final(aae_SHA1_CTX* context, uint8_t digest[SHA1_DIGEST_SIZE])
         finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
          >> ((3-(i & 3)) * 8) ) & 255);  /* Endian independent */
     }
-    SHA1_Update(context, (uint8_t *)"\200", 1);
+   aae_SHA1_Update(context, (uint8_t *)"\200", 1);
     while ((context->count[0] & 504) != 448) {
-        SHA1_Update(context, (uint8_t *)"\0", 1);
+       aae_SHA1_Update(context, (uint8_t *)"\0", 1);
     }
-    SHA1_Update(context, finalcount, 8);  /* Should cause a SHA1_Transform() */
+   aae_SHA1_Update(context, finalcount, 8);  /* Should cause a SHA1_Transform() */
     for (i = 0; i < SHA1_DIGEST_SIZE; i++) {
         digest[i] = (uint8_t)
          ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
@@ -279,12 +279,12 @@ FILE* file;
             return(-1);
         }
     }
-    SHA1_Init(&context);
+    aae_SHA1_Init(&context);
     while (!feof(file)) {  /* note: what if ferror(file) */
         i = fread(buffer, 1, 16384, file);
-        SHA1_Update(&context, buffer, i);
+       aae_SHA1_Update(&context, buffer, i);
     }
-    SHA1_Final(&context, digest);
+    aae_SHA1_Final(&context, digest);
     fclose(file);
     for (i = 0; i < SHA1_DIGEST_SIZE/4; i++) {
         for (j = 0; j < 4; j++) {
@@ -337,9 +337,9 @@ int main(int argc, char** argv)
     fprintf(stdout, "verifying SHA-1 implementation... ");
 
     for (k = 0; k < 2; k++){
-        SHA1_Init(&context);
-        SHA1_Update(&context, (uint8_t*)test_data[k], strlen(test_data[k]));
-        SHA1_Final(&context, digest);
+        aae_SHA1_Init(&context);
+       aae_SHA1_Update(&context, (uint8_t*)test_data[k], strlen(test_data[k]));
+        aae_SHA1_Final(&context, digest);
 	digest_to_hex(digest, output);
 
         if (strcmp(output, test_results[k])) {
@@ -351,10 +351,10 @@ int main(int argc, char** argv)
         }
     }
     /* million 'a' vector we feed separately */
-    SHA1_Init(&context);
+    aae_SHA1_Init(&context);
     for (k = 0; k < 1000000; k++)
-        SHA1_Update(&context, (uint8_t*)"a", 1);
-    SHA1_Final(&context, digest);
+       aae_SHA1_Update(&context, (uint8_t*)"a", 1);
+    aae_SHA1_Final(&context, digest);
     digest_to_hex(digest, output);
     if (strcmp(output, test_results[2])) {
         fprintf(stdout, "FAIL\n");
