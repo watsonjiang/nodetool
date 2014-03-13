@@ -50,7 +50,7 @@ fields: field
      | fields COMMA field 
 ;
 
-field: STRING {x->buf.push_back($1);free($1);}
+field: STRING {std::string t(&($1[1]), strlen($1)-2);x->buf.push_back(t);free($1);}
      | NUMBER {x->buf.push_back($1);free($1);}
      | EMPTY  {x->buf.push_back("");}
 ;
