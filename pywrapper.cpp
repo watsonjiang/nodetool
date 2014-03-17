@@ -4,6 +4,7 @@
 #include "hashtree.h"
 #include "filtermsg.h"
 #include "dmpfileparser.h"
+#include "debug.h"
 /* Hashtree */
 typedef struct py_hashtree_st* py_hashtree_t;
 struct py_hashtree_st
@@ -136,6 +137,7 @@ py_hashtree_get_digest(PyObject* self, PyObject* args)
       PyObject *digest = PyString_FromStringAndSize(rst[i], 
                                  sizeof(hashtree_digest_t));  
       PyList_Append(pylist, digest);
+      Py_DECREF(digest);
    }
    free(rst);         
    return pylist;
@@ -163,9 +165,11 @@ py_hashtree_get_segment(PyObject* self, PyObject* args)
       PyObject * row_key = PyString_FromStringAndSize((char*)&s_it->kstart,
                                  s_it->ksize);
       PyDict_SetItem(dict, row_key, digest);
+      Py_DECREF(digest);
+      Py_DECREF(row_key);
       s_it =(hashtree_segment_entry_t*) ((char*)s_it + ENTRY_PREFIX_LEN + s_it->ksize);
    }
-   
+   hashtree_release_segment(seg); 
    return dict;
 }
 
@@ -509,7 +513,7 @@ py_parse_dumpfile(PyObject* self, PyObject *args)
    if(!fp)
    {
       char buf[100] = {0};
-      snprintf(sizeof(buf), buf, "fail to open file [%s]", filename);
+      snprintf(buf, sizeof(buf), "fail to open file [%s]", filename);
       PyErr_SetString(PyExc_RuntimeError, buf);
       return NULL;
    }

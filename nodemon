@@ -1,30 +1,11 @@
 #!/usr/bin/python
-import xml.etree.ElementTree as ET
 from twisted.internet import task, protocol, reactor
 from aae import AaeConsoleFactory, FilterList 
+from aae import Config
 from pyaae import Hashtree, Msgpuller
 import argparse
 
 CONF_FILE = 'nodemon.xml'
-
-def get_console_info(xmlfile):
-   info = []
-   tree = ET.parse(xmlfile);
-   root = tree.getroot();
-   info.append(root.find('./console/ip').text)
-   info.append(int(root.find('./console/port').text))
-   return info 
-
-def get_metadb_info(xmlfile):
-   info = {}
-   tree = ET.parse(xmlfile)
-   root = tree.getroot();
-   info['host'] = root.find('./metadata-db/ip').text
-   info['port'] = int(root.find('./metadata-db/port').text)
-   info['user'] = root.find('./metadata-db/user').text
-   info['db'] = root.find('./metadata-db/db').text
-   info['passwd'] = root.find('./metadata-db/pass').text
-   return info
 
 
 def update_filter_list():
@@ -34,8 +15,9 @@ if __name__ == '__main__':
    parser = argparse.ArgumentParser()
    parser.add_argument('-c', '--config', default=CONF_FILE, help='the config file.(default:nodemon.xml)')
    args = parser.parse_args()
+   config = Config(args.config)
    ht = Hashtree(".db") 
-   info = get_metadb_info(args.config)
+   info = config.get_metadb_info()
    fl = FilterList(info)
    mp = Msgpuller(args.config, ht, fl._filterlist)
    #start msg puller
@@ -44,7 +26,7 @@ if __name__ == '__main__':
    l = task.LoopingCall(update_filter_list)
    l.start(10)
    #start console
-   ip, port = get_console_info(args.config)
-   reactor.listenTCP(port, AaeConsoleFactory(ht), interface=ip) 
+   ip, port = config.get_console_info()
+   reactor.listenTCP(port, AaeConsoleFactory(ht, config), interface=ip) 
    reactor.run()
    

@@ -1,7 +1,8 @@
 LDFLAGS=-lpthread \
         -L leveldb -lleveldb \
         -L sha1 -lsha1 \
-        -L mysql -lmysqlclient
+        -L mysql -lmysqlclient -lmysqlpp \
+        -L crypto -lcrypto
         
 
 CXXFLAGS=-I leveldb/include \
@@ -17,20 +18,16 @@ YACC=bison
 
 LEX=flex
 
-OBJS=hashtree.o filtermsg.o dmpfileparser.lex.o dmpfileparser.yacc.o
+OBJS=hashtree.o filtermsg.o dmpfileparser.lex.o dmpfileparser.yacc.o inputmsg.o
 
 BINS=nodemon
 
 LIBS=pyaae.so
 
-TESTBINS=hashtree_test filtermsg_test inputmsg_test
-
 #all:$(BINS) $(LIBS)
 all:$(LIBS)
 
-test:$(TESTBINS)
-
-pyaae.so: pywrapper.o $(OBJS) libshardpub.a libsox.a libconfig.a
+pyaae.so: pywrapper.o $(OBJS) libshardpub.a libsox.a libconfig.a 
 	g++ --shared $(LDFLAGS) -o $@ $^ 
 
 pywrapper.o:pywrapper.cpp dmpfileparser.yacc.h

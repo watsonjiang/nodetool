@@ -1,22 +1,23 @@
 <?xml version='1.0' encoding='utf8'?>
 <conf>
-   <msgclient>
-      <name>consistency_check</name>
-      <url>218.16.227.183:13320</url>
-      <data>./data/msgclient</data>
-      <default_offset>0</default_offset>
-      <threads>1</threads>
-      <subscribe_table>
-         <tbl>sinfo</tbl>
-      </subscribe_table>
-   </msgclient>
+   <business alias="myy">test</business>
+   <group name="">1</group>
+   <station>0</station>
    <metadata-db>
-      <ip>172.19.34.40</ip>
+      <ip>113.108.231.7</ip>
       <user>myshard</user>
       <pass>myshard</pass>
-      <port>3306</port>
-      <db>myshard_metadata1</db>
+      <port>6200</port>
+      <db>myshard_metadata</db>
    </metadata-db>
+   <publisher>
+      <pub_opt>
+          <name></name>
+          <mode>global</mode>
+          <uniqueness>version</uniqueness>
+          <threads>1</threads>
+      </pub_opt>
+   </publisher>
    <console>
       <ip>127.0.0.1</ip>
       <port>9999</port>

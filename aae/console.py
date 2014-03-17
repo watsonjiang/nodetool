@@ -5,6 +5,10 @@
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 from pyaae import Hashtree
+from treebuilder import TreeBuilder
+from os import listdir
+from os.path import isfile, join
+from metadata import Metadata
 
 def cmd_get_lv_hash(tree, args):
    tname = args[1]
@@ -40,15 +44,29 @@ def cmd_update(tree, args):
    tree.update(tname)
    return ["ack"]
 
-CMD_DICT = {
-   "get_lv_hash" : cmd_get_lv_hash,
-   "get_seg" : cmd_get_seg,
-   "update" : cmd_update
-}
+
+def cmd_rebuild_tree(tree, conf, args):
+   if len(args) != 2 :
+      return ["expect 1 argument.", "nack"]
+   tname = args[1]
+   tmp_tree = Hashtree(".tmp")
+   tmp_tb = TreeBuilder(tmp_tree, tname)
+   metadb = Metadata(conf.get_metadb_info(), conf.get_machine_room_no())
+   cols = metadb.get_cols(tname)
+   keys = metadb.get_keys(tname)
+   files = [f for f in listdir("/tmp/b") if isfile(join("/tmp/b", f))]
+   for f in files:
+      tmp_tb.build_tree_from_file(cols, keys, join("/tmp/b", f)) 
+   tmp_tb.copy_tree(tree) 
 
 class AaeConsole(LineReceiver):
-   def __init__(self, t):
-      self._tree = t
+   def __init__(self, t, conf):
+     self._CMD_DICT = {
+        "get_lv_hash" : (lambda x : cmd_get_lv_hash(t, x)),
+        "get_seg" : (lambda x : cmd_get_seg(t, x)),
+        "update" : (lambda x : cmd_update(t, x)),
+        "rebuild" : (lambda x : cmd_rebuild_tree(t, conf, x))
+     }
 
    def lineReceived(self, data):
       rsp = []
@@ -58,19 +76,20 @@ class AaeConsole(LineReceiver):
          i = i.strip()
          if i != "":
             il.append(i)
-      if len(il) > 0 and il[0] in CMD_DICT:
-         rsp = CMD_DICT[il[0]](self._tree, il)
+      if len(il) > 0 and il[0] in self._CMD_DICT:
+         rsp = self._CMD_DICT[il[0]](il)
       else:
          rsp = (["unknown command.", "nack"])
       for line in rsp:
          self.sendLine(line)
 
 class AaeConsoleFactory(Factory):
-   def __init__(self, tree):
+   def __init__(self, tree, conf):
       self._tree = tree
+      self._conf = conf 
 
    def buildProtocol(self, addr):
-      p = AaeConsole(self._tree)
+      p = AaeConsole(self._tree, self._conf)
       p.setLineMode()
       p.delimiter = '\n'
       return p

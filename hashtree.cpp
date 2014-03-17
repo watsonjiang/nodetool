@@ -373,6 +373,7 @@ hashtree_get_segment(hashtree_t t, const char * tname, unsigned int idx)
              (hashtree_segment_t)malloc(sizeof(char) * alloc_size * 2);
          memcpy(t, seg, sizeof(char) * alloc_size);
          alloc_size = alloc_size * 2;
+         free(seg);
          seg = t;
       }
       hashtree_segment_entry_t* s_it = 
@@ -382,6 +383,8 @@ hashtree_get_segment(hashtree_t t, const char * tname, unsigned int idx)
       memcpy(&s_it->kstart, &key->row_key_start, s_it->ksize);
       offset = offset + entry_size; 
    }
+   delete it;
+   t->db->ReleaseSnapshot(opt.snapshot);
    //finally, put a 'NULL' tag at the end.
    if(offset + sizeof(hashtree_segment_entry_t) >= alloc_size)
    {
@@ -389,6 +392,7 @@ hashtree_get_segment(hashtree_t t, const char * tname, unsigned int idx)
          (hashtree_segment_t)malloc(sizeof(char) * alloc_size 
                                     + sizeof(hashtree_segment_entry_t));
       memcpy(t, seg, sizeof(char) * alloc_size);
+      free(seg);
       seg = t;
    }
    hashtree_segment_entry_t* s_it = 

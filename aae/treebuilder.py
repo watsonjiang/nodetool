@@ -9,30 +9,34 @@ class TreeBuilder:
       self._name = tname
       self._tree = tree
 
-   def add_entry(self, key, kv):
-      sk = sorted(kv)
-      h = hashlib.sha1()
-      for i in sk:
-         h.update(kv[i])
-      self._tree.insert(self._name, key, h.digest())
+   def add_entry(self, key, digest):
+      self._tree.insert(self._name, key, digest)
     
-   def copy_tree(self, dst, src):
+   def copy_tree(self, dst):
       for i in xrange(0, 1024 * 1024):
          t = dst.get_segment(self._name, i) 
          for k in t:
             dst.remove(self._name, k)
-         t = src.get_segment(self._name, i)
+         t = self._tree.get_segment(self._name, i)
          for k in t:
             dst.insert(self._name, k, t[k])
 
-def build_tree_from_file(colinfo, file_, treebuilder):
-   for line in file_:
-      kv = pyaae.parse_line(colinfo, line)
-      sorted(kv)
-      h = hashlib.sha1()
-      for k, v in kv:
-         h.update(v)
-      treebuilder.add_entry(
+   def build_tree_from_file(self, cols, keys, file_):
+      pyaae.parse_dumpfile(file_, 
+                   lambda x : _handle_record(self, cols, keys, x))
+
+def _handle_record(treebuilder, cols, keys, val):
+   kv = dict(zip(cols, val))  #I love this lang:)
+   keys.sort()
+   hk = '#'.join([kv[i] for i in keys])
+   sorted(kv)
+   h = hashlib.sha1()
+   for k, v in kv.items():
+      h.update(v)
+   treebuilder.add_entry(hk, h.digest())
+
+
+    
 
 def tree_cmp(tname, t1, t2):
    t1.update(tname)
