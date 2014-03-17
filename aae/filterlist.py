@@ -35,9 +35,12 @@ class FilterList:
          if func_id != 0:
             tmp_key = "|".join([tname, colname])
             if tmp_key in self._data:
-               if _data[tmp_key] != func_id:
+               if self._data[tmp_key] != func_id:
                   self._filterlist.add(tname, colname, func_id)
-                  _data[tmp_key] = func_id
+                  self._data[tmp_key] = func_id
+            else:
+               self._filterlist.add(tname, colname, func_id)
+               self._data[tmp_key] = func_id
       cur.close()
       conn.close()
       a = set(["|".join([i,j]) for i,j in all_row_keys])

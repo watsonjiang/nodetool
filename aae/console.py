@@ -48,7 +48,8 @@ def cmd_get_filter_list(fl):
    l = fl.get_list()
    rsp = []
    for i in l.keys():
-      rsp.append(" ".join((i, l[i])))
+      rsp.append(" ".join((i, str(l[i]))))
+   rsp.sort()
    rsp.append("ack")
    return rsp
 
