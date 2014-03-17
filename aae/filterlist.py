@@ -11,10 +11,10 @@ class FilterList:
    def __init__(self, dbinfo):
       self._filterlist = _Filterlist()
       self._data = {}
-      self.dbinfo = dbinfo
+      self._dbinfo = dbinfo
 
    def update(self):
-      conn = pymysql.connect(**self.dbinfo)
+      conn = pymysql.connect(**self._dbinfo)
       cur = conn.cursor()
       cur.execute("select "
                   "table_name, column_name, data_type "
@@ -48,5 +48,6 @@ class FilterList:
           self._filterlist.remove(tname, colname)
           del self._data[tmp_key]
 
-                
+   def get_list(self):
+      return self._data
 

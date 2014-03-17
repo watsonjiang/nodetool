@@ -27,6 +27,6 @@ if __name__ == '__main__':
    l.start(10)
    #start console
    ip, port = config.get_console_info()
-   reactor.listenTCP(port, AaeConsoleFactory(ht, config), interface=ip) 
+   reactor.listenTCP(port, AaeConsoleFactory(ht, fl, config), interface=ip) 
    reactor.run()
    

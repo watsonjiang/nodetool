@@ -44,6 +44,13 @@ def cmd_update(tree, args):
    tree.update(tname)
    return ["ack"]
 
+def cmd_get_filter_list(fl):
+   l = fl.get_list()
+   rsp = []
+   for i in l.keys():
+      rsp.append(" ".join((i, l[i])))
+   rsp.append("ack")
+   return rsp
 
 def cmd_rebuild_tree(tree, conf, args):
    if len(args) != 2 :
@@ -60,12 +67,13 @@ def cmd_rebuild_tree(tree, conf, args):
    tmp_tb.copy_tree(tree) 
 
 class AaeConsole(LineReceiver):
-   def __init__(self, t, conf):
+   def __init__(self, t, fl, conf):
      self._CMD_DICT = {
         "get_lv_hash" : (lambda x : cmd_get_lv_hash(t, x)),
         "get_seg" : (lambda x : cmd_get_seg(t, x)),
         "update" : (lambda x : cmd_update(t, x)),
-        "rebuild" : (lambda x : cmd_rebuild_tree(t, conf, x))
+        "rebuild" : (lambda x : cmd_rebuild_tree(t, conf, x)),
+		"list_filter" : (lambda x : cmd_get_filter_list(fl))
      }
 
    def lineReceived(self, data):
@@ -84,12 +92,13 @@ class AaeConsole(LineReceiver):
          self.sendLine(line)
 
 class AaeConsoleFactory(Factory):
-   def __init__(self, tree, conf):
+   def __init__(self, tree, fl, conf):
       self._tree = tree
       self._conf = conf 
+      self._filterlist = fl
 
    def buildProtocol(self, addr):
-      p = AaeConsole(self._tree, self._conf)
+      p = AaeConsole(self._tree, self._filterlist, self._conf)
       p.setLineMode()
       p.delimiter = '\n'
       return p
