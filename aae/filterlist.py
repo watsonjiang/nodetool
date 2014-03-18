@@ -5,7 +5,10 @@
 # filter is a map which maps the column to it's data convert func.
 
 from pyaae import _Filterlist
-import pymysql
+#import pymysql
+import MySQLdb
+
+DB_DRV = MySQLdb
 
 class FilterList:
    def __init__(self, dbinfo):
@@ -14,7 +17,7 @@ class FilterList:
       self._dbinfo = dbinfo
 
    def update(self):
-      conn = pymysql.connect(**self._dbinfo)
+      conn = DB_DRV.connect(**self._dbinfo)
       cur = conn.cursor()
       cur.execute("select "
                   "table_name, column_name, data_type "
