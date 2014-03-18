@@ -131,6 +131,21 @@ filter_list_rm(filter_list_t l, char * tname, char * colname)
    return 0;
 }
 
+int
+filter_list_normalize_data(filter_list_t l,
+                        char * tname,
+                        char * colname,
+                        std::string& val)
+{
+   filter_func_t f = NULL;
+   if((f = filter_list_get(l, tname, colname)) != NULL)
+   {
+      val = f(val);
+      return 1;
+   }
+   return 0;
+}
+
 std::string
 filter_func_datetime(const std::string& val)
 {

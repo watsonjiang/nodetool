@@ -18,6 +18,11 @@ extern filter_func_t filter_list_get(filter_list_t l,
                                      char * tname,
                                      char * colname);
 
+extern int filter_list_normalize_data(filter_list_t l,
+                               char * tname,
+                               char * colname,
+                               std::string& val);
+
 extern std::string filter_func_datetime(const std::string& val);
 extern std::string filter_func_number(const std::string& val);
 #endif   //__FILTER_MSG_H__

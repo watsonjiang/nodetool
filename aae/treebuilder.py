@@ -5,9 +5,10 @@ import pyaae
 import hashlib
 
 class TreeBuilder:
-   def __init__(self, tree, tname):
+   def __init__(self, tree, fl, tname):
       self._name = tname
       self._tree = tree
+      self._filter = fl
 
    def add_entry(self, key, digest):
       self._tree.insert(self._name, key, digest)
@@ -32,6 +33,8 @@ def _handle_record(treebuilder, cols, keys, val):
    sorted(kv)
    h = hashlib.sha1()
    for k, v in kv.items():
+      v = treebuilder._filter.norm_data(
+                               treebuilder._name, k, v)
       h.update(v)
    treebuilder.add_entry(hk, h.digest())
 

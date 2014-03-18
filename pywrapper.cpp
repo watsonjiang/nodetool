@@ -320,9 +320,29 @@ py_filterlist_rm(py_filterlist_t self, PyObject *args)
 }
 
 static
+PyObject*
+py_filterlist_norm_data(py_filterlist_t self, PyObject *args)
+{
+   char * tname;
+   char * colname;
+   char * val;
+   if(!PyArg_ParseTuple(args, "sss", 
+                              &tname,
+                              &colname,
+                              &val))
+      return NULL;
+   std::string tmp(val);
+   filter_list_normalize_data(self->t, tname, colname, tmp); 
+   PyObject * r = PyString_FromString(tmp.c_str());
+   return r;
+}
+
+static
 PyMethodDef py_filterlist_methods[] = {
    {"add", (PyCFunction)py_filterlist_add, METH_VARARGS, NULL},
    {"remove", (PyCFunction)py_filterlist_rm, METH_VARARGS, NULL},
+   {"norm_data", (PyCFunction)py_filterlist_norm_data, 
+                                           METH_VARARGS, NULL},
    {NULL}
 };
 

@@ -26,12 +26,12 @@ class FilterList:
          all_row_keys.append([tname, colname])
          datatype = r[2]
          func_id = 0
-         if datatype.lower() == "datatime":
+         if datatype.lower() == "datetime":
             func_id = 1
          elif datatype.lower() == "bigint":
-            func_id = 1
+            func_id = 2 
          elif datatype.lower() == "integer":
-            func_id = 1
+            func_id = 2 
          if func_id != 0:
             tmp_key = "|".join([tname, colname])
             if tmp_key in self._data:
@@ -54,3 +54,5 @@ class FilterList:
    def get_list(self):
       return self._data
 
+   def norm_data(self, tname, colname, val):
+      return self._filterlist.norm_data(tname, colname, val)
