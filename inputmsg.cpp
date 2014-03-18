@@ -31,9 +31,8 @@ class MsgSubClientReceiver : public IMyshardPubHandler
          if(op == 1)
          {
             //a delete op
-            //TODO::int s = hashtree_remove(tname.c_str(), row_key.length(),
-            //                    row_key.c_str());
-            //debug("handle_msg:s:%d del %s\n", s, row_key.c_str()); 
+            int s = hashtree_remove(_hashtree, tname.c_str(), row_key.c_str());
+            debug("handle_msg:s:%d del %s\n", s, row_key.c_str()); 
             return true;
          }
          aae_SHA1_CTX ctx;
@@ -76,8 +75,9 @@ _msg_receive_loop(void* argv)
 {
    _arg_st* arg = (_arg_st*) argv;
    MsgSubClientReceiver receiver(arg->hashtree, arg->filter);
+   std::string xml(arg->xml);
    free(arg);
-   myshard_pub_main_run(arg->xml, &receiver);
+   myshard_pub_main_run(xml, &receiver);
    return NULL;
 }
 

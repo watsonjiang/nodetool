@@ -10,10 +10,17 @@
       <port>6200</port>
       <db>myshard_metadata</db>
    </metadata-db>
+   <metadata-db-backup>
+      <ip>113.108.231.7</ip>
+      <port>6200</port>
+      <db>myshard_metadata</db>
+      <user>myshard</user>
+      <pass>myshard</pass>
+   </metadata-db-backup>
    <publisher>
       <pub_opt>
-          <name></name>
-          <mode>global</mode>
+          <name>nodemon</name>
+          <mode>globle</mode>
           <uniqueness>version</uniqueness>
           <threads>1</threads>
       </pub_opt>

@@ -461,7 +461,7 @@ static
 PyObject*
 py_mp_start(py_mp_t self, PyObject* args)
 {
-   //msg_puller_start(PyString_AsString(self->xmlfile), self->hashtree->t, self->filter->t);
+   msg_puller_start(PyString_AsString(self->xmlfile), self->hashtree->t, self->filter->t);
    Py_RETURN_NONE; 
 }
 

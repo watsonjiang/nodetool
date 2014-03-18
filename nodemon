@@ -4,9 +4,11 @@ from aae import AaeConsoleFactory, FilterList
 from aae import Config
 from pyaae import Hashtree, Msgpuller
 import argparse
+from os.path import isdir
+from shutil import rmtree
 
 CONF_FILE = 'nodemon.xml'
-
+DB_NAME = '.db'
 
 def update_filter_list():
    fl.update()
@@ -16,7 +18,9 @@ if __name__ == '__main__':
    parser.add_argument('-c', '--config', default=CONF_FILE, help='the config file.(default:nodemon.xml)')
    args = parser.parse_args()
    config = Config(args.config)
-   ht = Hashtree(".db") 
+   if isdir(DB_NAME):
+      rmtree(DB_NAME)
+   ht = Hashtree(DB_NAME) 
    info = config.get_metadb_info()
    fl = FilterList(info)
    mp = Msgpuller(args.config, ht, fl._filterlist)

@@ -7,7 +7,8 @@ from twisted.protocols.basic import LineReceiver
 from pyaae import Hashtree
 from treebuilder import TreeBuilder
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, isdir
+import shutil
 from metadata import Metadata
 
 def cmd_get_lv_hash(tree, args):
@@ -57,7 +58,11 @@ def cmd_rebuild_tree(tree, conf, args):
    if len(args) != 2 :
       return ["expect 1 argument.", "nack"]
    tname = args[1]
-   tmp_tree = Hashtree(".tmp")
+   #use tname.db as tmp db folder name
+   dbname = ".".join((tname, "db"))
+   if isdir(dbname): 
+      shutil.rmtree(dbname)
+   tmp_tree = Hashtree(dbname)
    tmp_tb = TreeBuilder(tmp_tree, tname)
    metadb = Metadata(conf.get_metadb_info(), conf.get_machine_room_no())
    cols = metadb.get_cols(tname)
@@ -74,7 +79,7 @@ class AaeConsole(LineReceiver):
         "get_seg" : (lambda x : cmd_get_seg(t, x)),
         "update" : (lambda x : cmd_update(t, x)),
         "rebuild" : (lambda x : cmd_rebuild_tree(t, conf, x)),
-		"list_filter" : (lambda x : cmd_get_filter_list(fl))
+		  "list_filter" : (lambda x : cmd_get_filter_list(fl))
      }
 
    def lineReceived(self, data):
