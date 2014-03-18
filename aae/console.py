@@ -33,10 +33,10 @@ def cmd_get_lv_hash(tree, args):
 def cmd_get_seg(tree, args):
    tname = args[1]
    idx = int(args[2])
-   kv_list = tree.get_seg(tname, idx)
+   kv_list = tree.get_segment(tname, idx)
    rsp = []
-   for i,j in kv_list:
-     rsp.append(" ".join(i, j.encode("hex").upper()))
+   for i,j in kv_list.items():
+     rsp.append(" ".join((i, j.encode("hex").upper())))
    rsp.append("ack")
    return rsp
      

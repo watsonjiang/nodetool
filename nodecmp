@@ -40,6 +40,14 @@ class NodeClient:
          k,v = l.split(' ', 1)
          rst[k] = v
 
+   def update(self, tname):
+      self._s.send("update %s\n" % tname)
+      for l in self.readlines():
+         if l == "nack":
+            return {}
+         if l == "ack":
+            return {}
+      
    def close(self):
       self._s.close()
 
@@ -52,6 +60,8 @@ class HashtreeComparator():
       r1 = self._n1.get_digest(tname, 0, 0, 1)
       r2 = self._n2.get_digest(tname, 0, 0, 1)
       if r1[0] == r2[0]:
+         print "n1 digest:", r1[0]
+         print "n2 digest:", r2[0]
          return {}
       return {0 : r1 + r2}
 
@@ -93,6 +103,8 @@ class HashtreeComparator():
 
 
    def diff(self, tname):
+      self._n1.update(tname)
+      self._n2.update(tname)
       r = self._lv0_diff(tname)
       if r:
          r = self._lv1_diff(tname)
@@ -104,9 +116,9 @@ class HashtreeComparator():
                   print m, " : ", s0[m]
 
 if __name__ == '__main__':
-   nc1 = NodeClient('127.0.0.1', 9999)
-   nc2 = NodeClient('127.0.0.2', 9999)
+   nc1 = NodeClient('113.108.231.7', 9999)
+   nc2 = NodeClient('113.108.231.9', 9999)
    cmp = HashtreeComparator(nc1, nc2)
-   cmp.diff('sinfo')
+   cmp.diff('a')
    nc1.close()
    nc2.close()
