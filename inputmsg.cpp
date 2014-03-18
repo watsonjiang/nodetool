@@ -28,12 +28,14 @@ class MsgSubClientReceiver : public IMyshardPubHandler
          string tname = msg.at(SQ_MSG_KEY_TABLE_NAME); 
          int op = atoi(msg.at(SQ_MSG_KEY_OP_TYPE).c_str());
          string row_key = msg.at(SQ_MSG_KEY_MSG_KEY);
+         debug("on_msg: op %s, table %s, key %s\n", 
+                           op == 1? "del":"set", 
+                           tname.c_str(), row_key.c_str());
          if(op == 1)
          {
             //a delete op
             int s = hashtree_remove(_hashtree, tname.c_str(), row_key.c_str());
-            debug("handle_msg:s:%d del %s\n", s, row_key.c_str()); 
-            return true;
+            return 0;
          }
          aae_SHA1_CTX ctx;
          aae_SHA1_Init(&ctx);
@@ -45,19 +47,14 @@ class MsgSubClientReceiver : public IMyshardPubHandler
                continue;  //ignore system keys.
             }
             string val = it->second;
-            debug("handle_msg: %s : %s\n", it->first.c_str(), it->second.c_str());
             //normalize the data using filter.
             filter_list_normalize_data(_filter, tname.c_str(), it->first.c_str(), val);
             //update the digest.
             aae_SHA1_Update(&ctx, (uint8_t*)val.c_str(), val.length());
          }
          aae_SHA1_Final(&ctx, digest);
-         char buf[80] = {0};
-         hashtree_digest_to_hex(digest, buf);
          int s = hashtree_insert(_hashtree, tname.c_str(),
                                  row_key.c_str(), digest);
-         //debug("handle_msg:s:%d set %s : %s\n", s, row_key.c_str(), buf);
-        
          return 0;
       }
 };

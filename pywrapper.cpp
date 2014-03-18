@@ -130,6 +130,7 @@ py_hashtree_get_digest(PyObject* self, PyObject* args)
       length = 1;
    hashtree_digest_t* rst = 
       (hashtree_digest_t*)malloc(sizeof(hashtree_digest_t) * length);
+   memset(rst, 0, sizeof(hashtree_digest_t) * length);
    hashtree_get_digest(rst, t->t, tname, lv, start, length);
    PyObject *pylist = PyList_New(0);
    for(int i = 0; i < length; i++)
@@ -551,8 +552,29 @@ py_parse_dumpfile(PyObject* self, PyObject *args)
 }
 
 static
+PyObject*
+py_debug_on(PyObject * self, PyObject * args)
+{
+   debug_on();
+   Py_RETURN_NONE;
+}
+
+static
+PyObject*
+py_debug_off(PyObject * self, PyObject * args)
+{
+   debug_off();
+   Py_RETURN_NONE;
+}
+
+static
 PyMethodDef module_methods[] = {
-   {"parse_dumpfile", (PyCFunction)py_parse_dumpfile, METH_VARARGS, "parse the myshard data dump file."},
+   {"parse_dumpfile", (PyCFunction)py_parse_dumpfile, 
+                   METH_VARARGS, "parse the myshard data dump file."},
+   {"debug_on", (PyCFunction)py_debug_on,
+                   METH_NOARGS, "turn on debug log."},
+   {"debug_off", (PyCFunction)py_debug_off,
+                   METH_NOARGS, "turn off debug log."},
    {NULL}
 };
 

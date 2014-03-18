@@ -10,6 +10,7 @@ from os import listdir
 from os.path import isfile, join, isdir
 import shutil
 from metadata import Metadata
+import pyaae
 
 def cmd_get_lv_hash(tree, args):
    tname = args[1]
@@ -72,6 +73,18 @@ def cmd_rebuild_tree(tree, conf, args):
       tmp_tb.build_tree_from_file(cols, keys, join("/tmp/b", f)) 
    tmp_tb.copy_tree(tree) 
 
+def cmd_debug(args):
+   if len(args) != 2:
+      return ["expect 1 argument.", "nack"]
+   onoff = args[1]
+   if onoff.lower() == 'on':
+      pyaae.debug_on()
+   elif onoff.lower() == 'off':
+      pyaae.debug_off()
+   else:
+      return ['unknown argument. should be on/off', 'nack']
+   return ['ack']
+
 class AaeConsole(LineReceiver):
    def __init__(self, t, fl, conf):
      self._CMD_DICT = {
@@ -79,7 +92,8 @@ class AaeConsole(LineReceiver):
         "get_seg" : (lambda x : cmd_get_seg(t, x)),
         "update" : (lambda x : cmd_update(t, x)),
         "rebuild" : (lambda x : cmd_rebuild_tree(t, conf, x)),
-		  "list_filter" : (lambda x : cmd_get_filter_list(fl))
+		  "list_filter" : (lambda x : cmd_get_filter_list(fl)),
+        "debug" : cmd_debug
      }
 
    def lineReceived(self, data):

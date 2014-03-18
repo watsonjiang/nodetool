@@ -148,7 +148,11 @@ hashtree_insert(hashtree_t t,
    leveldb::Status s =
              t->db->Put(leveldb::WriteOptions(), sk, sv); 
    free(tmp);
-   debug("hashtree_insert: %s %s %s\n", s.ok() ? "ok" : "fail", tname, key);
+   DEBUG_BEGIN
+   char buf[80] = {0};
+   hashtree_digest_to_hex(hval, buf);
+   debug("hashtree_insert: %s %s %s %s\n", s.ok() ? "ok" : "fail", tname, key, buf);
+   DEBUG_END
    return !s.ok();
 }
 
@@ -232,8 +236,9 @@ _hashtree_get_lvx(hashtree_digest_t * dst,
       strcpy((char*)&key->row_key_start, buf);
       leveldb::Slice sk((char *)key,HASHKEY_PREFIX_LEN + strlen(buf));
       string tmp;
-      t->db->Get(leveldb::ReadOptions(), sk, &tmp);
-      memcpy(dst[i], tmp.c_str(), sizeof(hashtree_digest_t));
+      leveldb::Status s = t->db->Get(leveldb::ReadOptions(), sk, &tmp);
+      if(!s.IsNotFound())
+         memcpy(dst[i], tmp.c_str(), sizeof(hashtree_digest_t));
    }
    return 0;
 }
@@ -321,11 +326,6 @@ hashtree_update(hashtree_t t, const char * tname)
       aae_SHA1_Update(&ctx, lv1[i], sizeof(hashtree_digest_t));   
    }
    aae_SHA1_Final(&ctx, lv0);
-#if _DEBUG_
-   char buf[80] = {0};
-   hashtree_digest_to_hex(lv0, buf);
-   debug("hashtree_update: %s digest %s\n", tname, buf);
-#endif
    _hashtree_put_lvx(t, tname, &lv0, HASHTREE_LV0, 0, 1);
 }
 

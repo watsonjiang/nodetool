@@ -1,12 +1,16 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 #include <stdio.h>
-#if _DEBUG_
 #define debug(...) \
-        fprintf(stderr, __VA_ARGS__);
-#else
-#define debug(...)   //NOP
-#endif
+        { \
+          if(_debug_enabled) \
+             fprintf(stderr, __VA_ARGS__); \
+        }
+#define DEBUG_BEGIN if(_debug_enabled){ 
 
+#define DEBUG_END }
+extern int _debug_enabled;
+void debug_on();
+void debug_off();
 
 #endif

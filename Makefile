@@ -9,7 +9,6 @@ CXXFLAGS=-I leveldb/include \
          -I sha1 \
          -I /home/watson/myshard/trunk/hadb_publisher \
          -fpermissive \
-         -D_DEBUG_ \
          -DYYDEBUG=1 \
          -fPIC \
          -g
@@ -18,7 +17,7 @@ YACC=bison
 
 LEX=flex
 
-OBJS=hashtree.o filtermsg.o dmpfileparser.lex.o dmpfileparser.yacc.o inputmsg.o
+OBJS=hashtree.o filtermsg.o dmpfileparser.lex.o dmpfileparser.yacc.o inputmsg.o debug.o
 
 BINS=nodemon
 
