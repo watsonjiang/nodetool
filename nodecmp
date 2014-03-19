@@ -1,28 +1,38 @@
 #!/usr/bin/python
-import socket;
+import socket
+import select
 
 class NodeClient:
    _s = None  #the socket
+   _buf = ""  #the socket buffer
    def __init__(self, host, port):
       self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self._s.connect((host, port));
-   
+      self._s.setblocking(0)
+ 
+   def _read(self):
+      r, w, e = select.select([self._s], [], [], 2)
+      while len(r) == 0:
+         print "timeout, may have package loss."
+         r, w, e = select.select([self._s], [], [], 2)
+      return self._s.recv(4096)
+
    def readlines(self):
-      line = ""
-      c = self._s.recv(4096)
+      if len(self._buf) == 0:
+         self._buf = self._read()
       while True :
-         t = c.split('\n')
-         for i in xrange(0, len(t)-1):
-            yield t[i]
-         if c[len(c)-1] == '\n':
-            if t[len(t)-1] == 'ack' or t[len(t)-1] == 'nack':
-               yield t[len(t)-1]
-               break
-            else:
-               yield t[len(t)-1]
-               c = self._s.recv(4096)
+         if self._buf[0] == '\n':
+            self._buf = self._buf[1:]
+         if len(self._buf) == 0:
+            self._buf = self._read()
+         i = self._buf.find('\n')
+         if i == -1:
+            self._buf = ''.join((self._buf, self._read()))
+            continue
          else:
-            c = "".join((t[len(t)-1], self._s.recv(4096)))
+            line = self._buf[0:i]
+            self._buf = self._buf[i:]
+            yield line
 
    def get_digest(self, tname, lv, idx, length):
       rst = []
@@ -41,6 +51,7 @@ class NodeClient:
          if l == "nack":
             return {}
          if l == "ack":
+            print "###########", len(self._buf), self._buf
             return rst;
          k,v = l.split(' ', 1)
          rst[k] = v
@@ -123,6 +134,11 @@ class HashtreeComparator():
 if __name__ == '__main__':
    nc1 = NodeClient('113.108.231.7', 9999)
    nc2 = NodeClient('113.108.231.9', 9999)
+   for i in xrange(0, 1024 * 1024):
+      print i
+      nc1.get_segment("a", i)
+   import os
+   os.exit(1)
    cmp = HashtreeComparator(nc1, nc2)
    cmp.diff('a')
    nc1.close()
