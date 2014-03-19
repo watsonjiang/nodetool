@@ -48,7 +48,12 @@ class MsgSubClientReceiver : public IMyshardPubHandler
             }
             string val = it->second;
             //normalize the data using filter.
-            filter_list_normalize_data(_filter, tname.c_str(), it->first.c_str(), val);
+            int r = filter_list_normalize_data(_filter, tname.c_str(), it->first.c_str(), val);
+            if(r == 1)
+            {
+               debug("normalize value %s %s , [%s] -> [%s]\n", tname.c_str(),
+                                           it->first.c_str(), it->second.c_str(), val.c_str());
+            }
             //update the digest.
             aae_SHA1_Update(&ctx, (uint8_t*)val.c_str(), val.length());
          }

@@ -11,6 +11,7 @@ from os.path import isfile, join, isdir
 import shutil
 from metadata import Metadata
 import pyaae
+from datadump import Datadumper
 
 def cmd_get_lv_hash(tree, args):
    tname = args[1]
@@ -55,7 +56,7 @@ def cmd_get_filter_list(fl):
    rsp.append("ack")
    return rsp
 
-def cmd_rebuild_tree(tree, conf, args):
+def cmd_rebuild_tree(tree, fl, conf, args):
    if len(args) != 2 :
       return ["expect 1 argument.", "nack"]
    tname = args[1]
@@ -64,14 +65,20 @@ def cmd_rebuild_tree(tree, conf, args):
    if isdir(dbname): 
       shutil.rmtree(dbname)
    tmp_tree = Hashtree(dbname)
-   tmp_tb = TreeBuilder(tmp_tree, tname)
+   tmp_tb = TreeBuilder(tmp_tree, fl, tname)
    metadb = Metadata(conf.get_metadb_info(), conf.get_machine_room_no())
    cols = metadb.get_cols(tname)
    keys = metadb.get_keys(tname)
-   files = [f for f in listdir("/tmp/b") if isfile(join("/tmp/b", f))]
+   dmp_folder = join("/tmp", tname)
+   if isdir(dmp_folder):
+      shutil.rmtree(dmp_folder)
+   dumper = Datadumper(conf.get_mysharddb_info())
+   dumper.dump_table_to_file(tname, cols, dmp_folder)
+   files = [f for f in listdir(dmp_folder) if isfile(join(dmp_folder, f))]
    for f in files:
-      tmp_tb.build_tree_from_file(cols, keys, join("/tmp/b", f)) 
+      tmp_tb.build_tree_from_file(cols, keys, join(dmp_folder, f)) 
    tmp_tb.copy_tree(tree) 
+   return ['ack']
 
 def cmd_debug(args):
    if len(args) != 2:
@@ -91,7 +98,7 @@ class AaeConsole(LineReceiver):
         "get_lv_hash" : (lambda x : cmd_get_lv_hash(t, x)),
         "get_seg" : (lambda x : cmd_get_seg(t, x)),
         "update" : (lambda x : cmd_update(t, x)),
-        "rebuild" : (lambda x : cmd_rebuild_tree(t, conf, x)),
+        "rebuild" : (lambda x : cmd_rebuild_tree(t, fl, conf, x)),
 		  "list_filter" : (lambda x : cmd_get_filter_list(fl)),
         "debug" : cmd_debug
      }

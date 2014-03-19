@@ -14,8 +14,13 @@ class NodeClient:
          t = c.split('\n')
          for i in xrange(0, len(t)-1):
             yield t[i]
-         if len(c) == 4096 and c[4095] == '\n':
-            yield t[len(t)-1]
+         if c[len(c)-1] == '\n':
+            if t[len(t)-1] == 'ack' or t[len(t)-1] == 'nack':
+               yield t[len(t)-1]
+               break
+            else:
+               yield t[len(t)-1]
+               c = self._s.recv(4096)
          else:
             c = "".join((t[len(t)-1], self._s.recv(4096)))
 
@@ -96,7 +101,7 @@ class HashtreeComparator():
       diff = ks1.difference(ks2)
       for i in diff:
          r[i] = [r1[i], None]
-      diff = ks2.difference(ks2)
+      diff = ks2.difference(ks1)
       for i in diff:
          r[i] = [None, r2[i]]
       return r

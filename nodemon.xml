@@ -17,6 +17,13 @@
       <user>myshard</user>
       <pass>myshard</pass>
    </metadata-db-backup>
+   <myshard-db>
+      <ip>113.108.231.7</ip>
+      <port>8810</port>
+      <db>myshard</db>
+      <user>myshard</user>
+      <pass>myshard</pass>
+   </myshard-db>
    <publisher>
       <pub_opt>
           <name>nodemon</name>

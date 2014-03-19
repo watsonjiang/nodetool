@@ -152,6 +152,9 @@ filter_func_datetime(const std::string& val)
    if(val.empty())
    {
       return "0000-00-00 00:00:00";
+   }else if(val == "1970-01-01 08:00:00")
+   {
+      return "0000-00-00 00:00:00";
    }
    return val;
 }

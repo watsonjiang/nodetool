@@ -29,17 +29,13 @@ class TreeBuilder:
 def _handle_record(treebuilder, cols, keys, val):
    kv = dict(zip(cols, val))  #I love this lang:)
    keys.sort()
-   hk = '#'.join([kv[i] for i in keys])
-   sorted(kv)
+   hk = '###'.join(['dspeak.%s' % treebuilder._name] + ["%s:%s" %(i,kv[i]) for i in keys])
    h = hashlib.sha1()
-   for k, v in kv.items():
+   for k, v in sorted(kv.items(), key=lambda x : x[0]):
       v = treebuilder._filter.norm_data(
                                treebuilder._name, k, v)
       h.update(v)
    treebuilder.add_entry(hk, h.digest())
-
-
-    
 
 def tree_cmp(tname, t1, t2):
    t1.update(tname)
