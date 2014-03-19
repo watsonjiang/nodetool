@@ -66,7 +66,7 @@ def cmd_rebuild_tree(tree, fl, conf, args):
       shutil.rmtree(dbname)
    tmp_tree = Hashtree(dbname)
    tmp_tb = TreeBuilder(tmp_tree, fl, tname)
-   metadb = Metadata(conf.get_metadb_info(), conf.get_machine_room_no())
+   metadb = Metadata(conf.get_metadb_info(), conf.get_busi_name(), conf.get_machine_room_no())
    cols = metadb.get_cols(tname)
    keys = metadb.get_keys(tname)
    dmp_folder = join("/tmp", tname)
